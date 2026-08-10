@@ -1,4 +1,4 @@
-const CACHE_NAME = "hy-nhi-care-v6";
+const CACHE_NAME = "hy-nhi-care-v7";
 const APP_SHELL = [
   "./",
   "./index.html",
@@ -8,8 +8,11 @@ const APP_SHELL = [
   "./db.js",
   "./manifest.webmanifest",
   "./public/og-v2.png",
-  "./public/icon-192.jpg",
-  "./public/icon-512.jpg"
+  "./public/favicon-32-v2.png",
+  "./public/apple-touch-icon-180-v2.png",
+  "./public/icon-192-v2.png",
+  "./public/icon-512-v2.png",
+  "./public/icon-maskable-512-v2.png"
 ];
 
 self.addEventListener("install", (event) => {
