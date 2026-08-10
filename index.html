@@ -1,0 +1,158 @@
+<!doctype html>
+<html lang="vi">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+    <meta name="theme-color" content="#fff8fb" />
+    <meta name="description" content="Nhật ký chăm sóc Hỷ Nhi – dùng được cả khi mất mạng." />
+    <meta property="og:title" content="Hỷ Nhi • Nhật ký của bé" />
+    <meta property="og:description" content="Nhật ký chăm sóc bé dùng được cả khi mất mạng." />
+    <meta property="og:image" content="./public/og-v2.png" />
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="robots" content="noindex, nofollow, noarchive" />
+    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self'; img-src 'self' data:; connect-src 'self' https://hy-nhi-care.tonynguyen2409.chatgpt.site; object-src 'none'; base-uri 'self'; form-action 'self'" />
+    <link rel="manifest" href="./manifest.webmanifest" />
+    <link rel="apple-touch-icon" href="./public/icon-192.jpg" />
+    <link rel="stylesheet" href="./styles.css" />
+    <title>Hỷ Nhi • Nhật ký của bé</title>
+  </head>
+  <body>
+    <div id="login-view" class="login-view">
+      <main class="login-card">
+        <div class="login-heart" aria-hidden="true">♡</div>
+        <h1>Nhật ký lớn lên của <span>Bé Hỷ Nhi!</span></h1>
+        <p class="login-love">Ba mẹ yêu con nhiều!</p>
+        <form id="login-form" class="stack-lg">
+          <label>Tài khoản<input id="login-username" name="username" autocomplete="username" required /></label>
+          <label>Mật khẩu<input id="login-password" name="password" type="password" autocomplete="current-password" required /></label>
+          <p id="login-error" class="form-error" role="alert"></p>
+          <button class="button primary full" type="submit">Đăng nhập</button>
+          <p class="session-note">Tự động giữ đăng nhập trên thiết bị này</p>
+        </form>
+      </main>
+    </div>
+
+    <div id="app-view" class="app-view hidden">
+      <header class="topbar">
+        <div>
+          <p id="profile-full-name" class="eyebrow">NHẬT KÝ CỦA BÉ</p>
+          <h1 id="greeting">Chào buổi sáng</h1>
+        </div>
+        <div class="topbar-actions">
+          <button id="sync-button" class="sync-pill" type="button" aria-label="Đồng bộ dữ liệu">
+            <span id="sync-dot" class="sync-dot"></span><span id="sync-label">Đã lưu</span>
+          </button>
+          <button id="header-logout" class="header-logout" type="button">Đăng xuất</button>
+        </div>
+      </header>
+
+      <main id="main-content" class="main-content">
+        <section id="page-today" class="page active" data-page="today">
+          <article class="baby-card">
+            <div>
+              <p>HỶ NHI ĐƯỢC</p>
+              <strong id="baby-age">—</strong>
+              <small id="baby-birth">Thông tin chỉ hiện sau khi đăng nhập</small>
+            </div>
+            <div class="baby-orbit" aria-hidden="true"><span>♡</span></div>
+          </article>
+
+          <section class="section-block">
+            <div class="section-heading"><div><p class="eyebrow">TỔNG QUAN HÔM NAY</p><h2>Một ngày của Hỷ Nhi</h2></div></div>
+            <div class="metric-grid">
+              <button class="metric-card coral" type="button" data-open="feed">
+                <span class="metric-icon" aria-hidden="true">◒</span><strong id="metric-feed">0 ml</strong><small>Bé đã uống</small>
+              </button>
+              <button class="metric-card lilac" type="button" data-open="pump">
+                <span class="metric-icon" aria-hidden="true">◉</span><strong id="metric-pump">0 ml</strong><small>Sữa mẹ đã hút</small>
+              </button>
+              <button class="metric-card sage" type="button" data-open="poo">
+                <span class="metric-icon" aria-hidden="true">✦</span><strong id="metric-poo">0 lần</strong><small>Đi ngoài</small>
+              </button>
+              <button class="metric-card sky" type="button" data-open="sleep">
+                <span class="metric-icon" aria-hidden="true">☾</span><strong id="metric-sleep">0 phút</strong><small>Thời gian ngủ</small>
+              </button>
+            </div>
+          </section>
+
+          <section id="active-bottles-section" class="section-block hidden">
+            <div class="section-heading"><div><p class="eyebrow">BÌNH SỮA ĐANG DÙNG</p><h2>Thời gian an toàn còn lại</h2></div></div>
+            <div id="active-bottles" class="stack"></div>
+          </section>
+
+          <section class="section-block">
+            <div class="section-heading"><div><p class="eyebrow">GHI NHANH</p><h2>Thêm hoạt động mới</h2></div></div>
+            <div class="quick-actions">
+              <button type="button" data-open="feed"><span>◒</span>Bé uống</button>
+              <button type="button" data-open="pump"><span>◉</span>Hút sữa</button>
+              <button type="button" data-open="poo"><span>✦</span>Đi ngoài</button>
+              <button type="button" data-open="sleep"><span>☾</span>Ngủ</button>
+              <button type="button" data-open="growth"><span>↗</span>Đo cơ thể</button>
+              <button type="button" data-open="vaccine"><span>＋</span>Tiêm chủng</button>
+            </div>
+          </section>
+
+          <section class="section-block">
+            <div class="section-heading"><div><p class="eyebrow">DÒNG THỜI GIAN</p><h2>Gần đây</h2></div><button class="text-button" type="button" data-go="timeline">Xem tất cả</button></div>
+            <div id="recent-timeline" class="timeline empty-state">Chưa có hoạt động. Hãy nhập cữ đầu tiên của bé.</div>
+          </section>
+        </section>
+
+        <section id="page-timeline" class="page" data-page="timeline">
+          <div class="page-title"><p class="eyebrow">NHẬT KÝ</p><h2>Dòng thời gian</h2><p class="muted">Mọi thay đổi đều lưu người nhập và thời gian thực tế.</p></div>
+          <div class="filter-row" role="group" aria-label="Lọc nhật ký">
+            <button class="chip selected" type="button" data-filter="all">Tất cả</button><button class="chip" type="button" data-filter="feed">Bé uống sữa</button><button class="chip" type="button" data-filter="pump">Hút sữa</button><button class="chip" type="button" data-filter="poo">Đi ngoài</button><button class="chip" type="button" data-filter="sleep">Giấc ngủ</button>
+          </div>
+          <div id="full-timeline" class="timeline empty-state">Chưa có dữ liệu.</div>
+        </section>
+
+        <section id="page-growth" class="page" data-page="growth">
+          <div class="page-title with-action"><div><p class="eyebrow">LỚN LÊN</p><h2>Tăng trưởng</h2></div><button class="button soft" type="button" data-open="growth">＋ Thêm số đo</button></div>
+          <div id="latest-growth" class="growth-summary empty-state">Chưa có số đo. Bạn có thể bổ sung sau.</div>
+          <div class="section-heading"><div><p class="eyebrow">LỊCH SỬ</p><h2>Các lần đo</h2></div></div>
+          <div id="growth-history" class="stack empty-state">Chưa có dữ liệu.</div>
+        </section>
+
+        <section id="page-vaccine" class="page" data-page="vaccine">
+          <div class="page-title with-action"><div><p class="eyebrow">BẢO VỆ BÉ</p><h2>Lịch tiêm chủng</h2></div><button class="button soft" type="button" data-open="vaccine">＋ Ghi mũi đã tiêm/uống</button></div>
+          <div class="notice-card"><strong>Lịch tham khảo</strong><p>Dựa trên Thông tư 52/2025/TT-BYT. Ngày thực tế và sản phẩm sẽ quyết định mũi tiếp theo.</p></div>
+          <div id="vaccine-list" class="vaccine-list"></div>
+        </section>
+
+        <section id="page-more" class="page" data-page="more">
+          <div class="page-title"><p class="eyebrow">TỔNG HỢP</p><h2>Báo cáo & cài đặt</h2></div>
+          <article class="report-card">
+            <p class="eyebrow">7 NGÀY GẦN NHẤT</p><div id="report-summary" class="report-numbers"></div>
+            <div class="button-row"><button id="export-csv" class="button soft" type="button">Bảng dữ liệu</button><button id="export-json" class="button soft" type="button">Dữ liệu cho AI</button><button id="print-report" class="button primary" type="button">In hoặc lưu PDF</button></div>
+          </article>
+          <div class="settings-list">
+            <button id="theme-toggle" type="button"><span>Giao diện ban đêm</span><strong>Tự động</strong></button>
+            <button id="profile-button" type="button"><span>Hồ sơ của bé</span><strong>Hỷ Nhi ›</strong></button>
+            <button id="logout-button" type="button"><span>Đăng xuất</span><strong id="current-user">›</strong></button>
+          </div>
+          <p class="source-note">Lịch tiêm chủng chỉ dùng để nhắc việc, không thay thế chỉ định của bác sĩ hoặc cơ sở tiêm chủng.</p>
+        </section>
+      </main>
+
+      <nav class="bottom-nav" aria-label="Điều hướng chính">
+        <button class="active" type="button" data-nav="today"><span>⌂</span>Hôm nay</button>
+        <button type="button" data-nav="timeline"><span>≡</span>Nhật ký</button>
+        <button id="main-add" class="main-add" type="button" aria-label="Nhập nhanh">＋</button>
+        <button type="button" data-nav="growth"><span>↗</span>Tăng trưởng</button>
+        <button type="button" data-nav="vaccine"><span>◇</span>Tiêm chủng</button>
+        <button class="nav-more" type="button" data-nav="more"><span>•••</span>Thêm</button>
+      </nav>
+    </div>
+
+    <div id="sheet-backdrop" class="sheet-backdrop hidden"></div>
+    <section id="form-sheet" class="sheet hidden" role="dialog" aria-modal="true" aria-labelledby="sheet-title">
+      <div class="sheet-handle"></div>
+      <div class="sheet-header"><div><p id="sheet-eyebrow" class="eyebrow"></p><h2 id="sheet-title"></h2></div><button id="close-sheet" class="icon-button" type="button" aria-label="Đóng">×</button></div>
+      <form id="entry-form" class="sheet-body"></form>
+    </section>
+
+    <div id="toast" class="toast hidden" role="status"></div>
+    <script src="./config.js"></script>
+    <script type="module" src="./app.js"></script>
+  </body>
+</html>
