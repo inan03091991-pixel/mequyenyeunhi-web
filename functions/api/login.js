@@ -53,7 +53,11 @@ export async function onRequestPost(context) {
         "Set-Cookie": `hynhi_session=${token}; HttpOnly${secure}; SameSite=Strict; Path=/; Max-Age=${SESSION_MAX_AGE}`,
       },
     });
-  } catch {
+  } catch (error) {
+    console.error(JSON.stringify({
+      event: "login_error",
+      message: error instanceof Error ? error.message : "unknown_error",
+    }));
     return json({ error: "bad_request" }, 400);
   }
 }
