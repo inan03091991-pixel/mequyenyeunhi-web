@@ -1,4 +1,3 @@
-
 import {
   openDatabase,
   getEntries,
@@ -222,11 +221,63 @@ async function refreshData() {
 
 function renderAll() {
   renderTodayMetrics();
+  renderDailyInsights();
   renderTimeline();
   renderGrowth();
   renderVaccines();
   renderReport();
   renderActiveBottles();
+}
+
+function entriesForDay(date) {
+  const key = localDateKey(date);
+  return state.entries.filter((entry) => localDateKey(new Date(entry.occurredAt)) === key);
+}
+
+function totalsForDay(date) {
+  const entries = entriesForDay(date);
+  return {
+    entries,
+    feed: sum(entries.filter((item) => item.type === "feed"), (item) => item.payload.amount || 0),
+    pump: sum(entries.filter((item) => item.type === "pump"), (item) => item.payload.amount || 0),
+    poo: entries.filter((item) => item.type === "poo").length,
+  };
+}
+
+function renderDailyInsights() {
+  const now = new Date();
+  const yesterday = new Date(now);
+  yesterday.setDate(yesterday.getDate() - 1);
+  const today = totalsForDay(now);
+  const previous = totalsForDay(yesterday);
+  const latestPump = today.entries.find((entry) => entry.type === "pump");
+  const dayNearlyDone = now.getHours() >= 20;
+  const pumpDayFinished = Boolean(latestPump?.payload?.isLastPump);
+  const messages = [];
+
+  if (dayNearlyDone && today.poo === 0) {
+    messages.push({ mood: "sad", icon: "☹", title: "Chiếc bụng nhỏ đang im ắng", text: "Hôm nay chưa ghi nhận lần vệ sinh cá nhân nào. Ba mẹ nhớ kiểm tra lại nhật ký và để ý Hỷ Nhi thêm nhé." });
+  }
+
+  if (dayNearlyDone && previous.feed > 0 && today.feed < previous.feed) {
+    messages.push({ mood: "gentle", icon: "♡", title: "Hôm nay Hỷ Nhi uống ít hơn một chút", text: "Ít hơn hôm qua rồi. Ba mẹ mình bình tĩnh, cùng theo dõi thêm và ôm em một cái thật êm nhé." });
+  }
+
+  if ((dayNearlyDone || pumpDayFinished) && previous.pump > 0 && today.pump > 0) {
+    if (today.pump < previous.pump) {
+      messages.push({ mood: "gentle", icon: "♡", title: "Một lời ôm dành cho mẹ Quyên", text: "Hôm nay lượng sữa ít hơn hôm qua một chút. Mẹ Quyên đừng lo, hôm nay mẹ đã cố gắng rất nhiều rồi!" });
+    } else if (today.pump > previous.pump) {
+      messages.push({ mood: "happy", icon: "✦", title: "Kho sữa của Hỷ Nhi đầy thêm rồi!", text: "Mẹ Quyên hôm nay hút được nhiều sữa quá. Hỷ Nhi có một kho đồ ăn thật ấm áp rồi!" });
+    }
+  }
+
+  if (pumpDayFinished) {
+    messages.push({ mood: "love", icon: "♥", title: "Ca làm sữa hôm nay đã khép lại", text: "Mẹ Quyên hoàn thành xuất sắc nhiệm vụ rồi. Hỷ Nhi và ba yêu mẹ nhiều lắm!" });
+  }
+
+  const section = $("#daily-insights-section");
+  section.classList.toggle("hidden", !messages.length);
+  $("#daily-insights").innerHTML = messages.map((message) => `<article class="insight-card ${message.mood}"><span class="insight-icon" aria-hidden="true">${message.icon}</span><div><strong>${escapeHtml(message.title)}</strong><p>${escapeHtml(message.text)}</p></div></article>`).join("");
 }
 
 function navigate(page) {
@@ -282,7 +333,7 @@ function describeEntry(entry) {
     return { title: `Bé uống ${payload.amount || 0} ml`, detail: `${milk}${payload.leftover ? ` • còn ${payload.leftover} ml` : ""}` };
   }
   if (entry.type === "pump") return { title: `Hút được ${payload.amount || 0} ml`, detail: payload.note || "Sữa mẹ hút bằng máy" };
-  if (entry.type === "poo") return { title: `Đi ngoài • ${payload.color || "Chưa chọn màu"}`, detail: payload.consistency || "Chưa chọn dạng phân" };
+  if (entry.type === "poo") return { title: `Vệ sinh cá nhân • ${payload.color || "Chưa chọn màu"}`, detail: payload.consistency || "Chưa chọn dạng phân" };
   if (entry.type === "sleep") return { title: `Ngủ ${formatDuration(payload.durationMinutes || 0)}`, detail: `${formatShortTime(payload.startedAt)} – ${formatShortTime(payload.endedAt)}` };
   if (entry.type === "growth") return { title: "Cập nhật số đo", detail: [payload.weight && `${payload.weight} kg`, payload.length && `${payload.length} cm`, payload.head && `vòng đầu ${payload.head} cm`].filter(Boolean).join(" • ") };
   if (entry.type === "vaccine") return { title: VACCINE_NAMES[payload.code] || payload.name || "Tiêm chủng", detail: `Mũi ${payload.dose || 1}${payload.place ? ` • ${payload.place}` : ""}` };
@@ -367,7 +418,7 @@ function renderReport() {
   const feed = sum(recent.filter((entry) => entry.type === "feed"), (entry) => entry.payload.amount || 0);
   const pump = sum(recent.filter((entry) => entry.type === "pump"), (entry) => entry.payload.amount || 0);
   const poo = recent.filter((entry) => entry.type === "poo").length;
-  $("#report-summary").innerHTML = `<div><strong>${feed}</strong><small>ml bé đã uống</small></div><div><strong>${pump}</strong><small>ml sữa đã hút</small></div><div><strong>${poo}</strong><small>lần đi ngoài</small></div>`;
+  $("#report-summary").innerHTML = `<div><strong>${feed}</strong><small>ml bé đã uống</small></div><div><strong>${pump}</strong><small>ml mẹ đã hút</small></div><div><strong>${poo}</strong><small>lần vệ sinh</small></div>`;
 }
 
 function renderActiveBottles() {
@@ -411,7 +462,7 @@ function openSheet(type, entry = null) {
   const titles = {
     feed: ["CỮ SỮA", entry ? "Sửa cữ bé uống" : "Bé vừa uống"],
     pump: ["SỮA MẸ", entry ? "Sửa lần hút sữa" : "Mẹ vừa hút sữa"],
-    poo: ["TIÊU HÓA", entry ? "Sửa lần đi ngoài" : "Bé vừa đi ngoài"],
+    poo: ["VỆ SINH CÁ NHÂN", entry ? "Sửa lần đi Poo" : "Ghi một lần đi Poo"],
     sleep: ["GIẤC NGỦ", entry ? "Sửa giấc ngủ" : "Ghi một giấc ngủ"],
     growth: ["LỚN LÊN", entry ? "Sửa số đo" : "Thêm số đo"],
     vaccine: ["BẢO VỆ BÉ", entry ? "Sửa thông tin tiêm chủng" : "Ghi mũi đã tiêm hoặc uống"],
@@ -451,8 +502,8 @@ function formTemplate(type, entry) {
       <label>Ghi chú<textarea name="note" rows="2" placeholder="Ọc, trớ hoặc điều cần nhớ…">${escapeHtml(payload.note || "")}</textarea></label>
       <button class="button primary full" type="submit">${entry ? "Lưu thay đổi" : "Lưu cữ sữa"}</button>${deleteAction}`;
   }
-  if (type === "pump") return `<label>Lượng hút được (ml)<input name="amount" type="number" min="1" max="2000" inputmode="decimal" value="${payload.amount || ""}" required></label><label>Thời gian<input name="occurredAt" type="datetime-local" value="${occurred}" required></label><label>Ghi chú<textarea name="note" rows="2">${escapeHtml(payload.note || "")}</textarea></label><button class="button primary full" type="submit">Lưu lần hút sữa</button>${deleteAction}`;
-  if (type === "poo") return `<fieldset><legend>Màu phân</legend><div class="choice-grid">${["Vàng", "Xanh", "Nâu", "Đen", "Đỏ", "Trắng/nhạt", "Màu khác"].map((value) => choice("color", value, value, payload.color === value || (!payload.color && value === "Vàng"))).join("")}</div></fieldset><fieldset><legend>Dạng phân</legend><div class="choice-grid">${["Lỏng", "Hơi lỏng", "Sệt", "Thành khuôn", "Cứng"].map((value) => choice("consistency", value, value, payload.consistency === value || (!payload.consistency && value === "Sệt"))).join("")}</div></fieldset><label>Thời gian<input name="occurredAt" type="datetime-local" value="${occurred}" required></label><label>Ghi chú<textarea name="note" rows="2">${escapeHtml(payload.note || "")}</textarea></label><button class="button primary full" type="submit">Lưu lần đi ngoài</button>${deleteAction}`;
+  if (type === "pump") return `<label>Lượng sữa mẹ hút được (ml)<input name="amount" type="number" min="1" max="2000" inputmode="decimal" value="${payload.amount || ""}" required></label><label>Thời gian hút sữa<input name="occurredAt" type="datetime-local" value="${occurred}" required></label><label class="check-card"><input name="isLastPump" type="checkbox" ${payload.isLastPump ? "checked" : ""}><span><strong>Đây là cữ hút cuối hôm nay</strong><small>Đánh dấu để cả nhà chúc mừng mẹ Quyên nhé!</small></span></label><label>Ghi chú<textarea name="note" rows="2">${escapeHtml(payload.note || "")}</textarea></label><button class="button primary full" type="submit">Lưu cữ hút sữa</button>${deleteAction}`;
+  if (type === "poo") return `<fieldset><legend>Màu phân</legend><div class="choice-grid">${["Vàng", "Xanh", "Nâu", "Đen", "Đỏ", "Trắng/nhạt", "Màu khác"].map((value) => choice("color", value, value, payload.color === value || (!payload.color && value === "Vàng"))).join("")}</div></fieldset><fieldset><legend>Dạng phân</legend><div class="choice-grid">${["Lỏng", "Hơi lỏng", "Sệt", "Thành khuôn", "Cứng"].map((value) => choice("consistency", value, value, payload.consistency === value || (!payload.consistency && value === "Sệt"))).join("")}</div></fieldset><label>Thời gian<input name="occurredAt" type="datetime-local" value="${occurred}" required></label><label>Ghi chú<textarea name="note" rows="2">${escapeHtml(payload.note || "")}</textarea></label><button class="button primary full" type="submit">Lưu lần vệ sinh</button>${deleteAction}`;
   if (type === "sleep") return `<div class="field-row"><label>Bắt đầu<input name="startedAt" type="datetime-local" value="${toLocalInput(payload.startedAt || new Date(Date.now() - 60 * 60000))}" required></label><label>Kết thúc<input name="endedAt" type="datetime-local" value="${toLocalInput(payload.endedAt || new Date())}" required></label></div><label>Ghi chú<textarea name="note" rows="2">${escapeHtml(payload.note || "")}</textarea></label><button class="button primary full" type="submit">Lưu giấc ngủ</button>${deleteAction}`;
   if (type === "growth") return `<div class="field-row"><label>Cân nặng (kg)<input name="weight" type="number" min="0.5" max="40" step="0.01" inputmode="decimal" value="${payload.weight || ""}"></label><label>Chiều dài (cm)<input name="length" type="number" min="20" max="150" step="0.1" inputmode="decimal" value="${payload.length || ""}"></label></div><label>Vòng đầu (cm)<input name="head" type="number" min="20" max="80" step="0.1" inputmode="decimal" value="${payload.head || ""}"></label><label>Thời gian đo<input name="occurredAt" type="datetime-local" value="${occurred}" required></label><label>Nơi đo / ghi chú<input name="note" value="${escapeHtml(payload.note || "")}"></label><button class="button primary full" type="submit">Lưu số đo</button>${deleteAction}`;
   if (type === "vaccine") return `<label>Loại vắc-xin<select name="code">${Object.entries(VACCINE_NAMES).map(([code, name]) => `<option value="${code}" ${payload.code === code ? "selected" : ""}>${name}</option>`).join("")}</select></label><div class="field-row"><label>Mũi số<input name="dose" type="number" min="1" max="20" value="${payload.dose || 1}" required></label><label>Ngày giờ thực tế<input name="occurredAt" type="datetime-local" value="${occurred}" required></label></div><label>Tên sản phẩm (nếu biết)<input name="productName" value="${escapeHtml(payload.productName || "")}" placeholder="Ví dụ: Rotavin, RotaTeq…"></label><label>Nơi tiêm hoặc uống<input name="place" value="${escapeHtml(payload.place || "")}"></label><label>Phản ứng hoặc ghi chú<textarea name="note" rows="2">${escapeHtml(payload.note || "")}</textarea></label><button class="button primary full" type="submit">Lưu thông tin tiêm chủng</button>${deleteAction}`;
@@ -493,7 +544,7 @@ async function saveFormEntry(event) {
     payload = { milkType: data.get("milkType"), amount, leftover: Number(data.get("leftover") || 0), touchedAt: fromLocalInput(data.get("touchedAt")), endedAt: fromLocalInput(data.get("endedAt")), note: data.get("note")?.trim() || "", discardedAt: existing?.payload?.discardedAt || null };
     occurredAt = payload.touchedAt;
   } else if (state.sheetType === "pump") {
-    payload = { amount: Number(data.get("amount")), note: data.get("note")?.trim() || "" };
+    payload = { amount: Number(data.get("amount")), isLastPump: data.get("isLastPump") === "on", note: data.get("note")?.trim() || "" };
   } else if (state.sheetType === "poo") {
     payload = { color: data.get("color"), consistency: data.get("consistency"), note: data.get("note")?.trim() || "" };
   } else if (state.sheetType === "sleep") {
@@ -528,7 +579,7 @@ async function saveFormEntry(event) {
   await saveEntry(entry);
   closeSheet();
   await refreshData();
-  showToast(existing ? "Đã lưu thay đổi" : "Đã thêm vào nhật ký");
+  showToast(payload?.isLastPump ? "Mẹ Quyên hoàn thành ca làm sữa rồi! ♥" : existing ? "Đã lưu thay đổi" : "Đã thêm vào nhật ký");
   scheduleSync();
 }
 
