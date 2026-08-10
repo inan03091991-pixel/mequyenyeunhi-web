@@ -159,10 +159,7 @@ async function remoteLogin(username, password) {
     });
     if (response.status === 401) throw new Error("Tài khoản hoặc mật khẩu chưa đúng.");
     if (response.status === 429) throw new Error("Đã thử đăng nhập quá nhiều lần. Vui lòng chờ 15 phút rồi thử lại.");
-    if (!response.ok) {
-      const diagnostic = await response.clone().json().catch(() => ({}));
-      throw new Error(`Máy chủ trả về lỗi ${response.status}: ${diagnostic.message || diagnostic.error || "không rõ nguyên nhân"}`);
-    }
+    if (!response.ok) throw new Error("Chưa thể kết nối máy chủ. Vui lòng thử lại.");
     return response.json();
   } catch (error) {
     if (error instanceof TypeError) throw new Error("Không kết nối được máy chủ. Vui lòng kiểm tra mạng.");
