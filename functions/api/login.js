@@ -58,7 +58,7 @@ export async function onRequestPost(context) {
       event: "login_error",
       message: error instanceof Error ? error.message : "unknown_error",
     }));
-    return json({ error: "bad_request" }, 400);
+    return json({ error: "bad_request", message: error instanceof Error ? error.message : "unknown_error" }, 400);
   }
 }
 
