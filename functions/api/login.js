@@ -1,7 +1,7 @@
 
 const USER_VERIFIERS = {
-  mequyen: { salt: "kP3ABO5WahkvRQYbnuw4ug==", hash: "l3yJbE0lt8Qeet/0kvGGJqWeNhouXyBYl/xnIWMILKU=" },
-  bonghia: { salt: "W70pPl8HVQctTtpcbJBfoQ==", hash: "mdt38v6xJUmQzxJPs2YE4EPGiDPGfNjF2rwpgAjXH24=" },
+  mequyen: { salt: "kP3ABO5WahkvRQYbnuw4ug==", hash: "GNWNPBlkAKZPuBeiVKnCZWdmYU6mzhQEq+TS2S/t9OA=" },
+  bonghia: { salt: "W70pPl8HVQctTtpcbJBfoQ==", hash: "wCQtoMySSNVkLP49UuX+J03IjLZvMYL3mTLcgNIjc7s=" },
 };
 
 const PROFILE = {
@@ -58,7 +58,7 @@ export async function onRequestPost(context) {
       event: "login_error",
       message: error instanceof Error ? error.message : "unknown_error",
     }));
-    return json({ error: "bad_request", message: error instanceof Error ? error.message : "unknown_error" }, 400);
+    return json({ error: "bad_request" }, 400);
   }
 }
 
@@ -79,7 +79,7 @@ async function loginAttemptKey(request, username) {
 
 async function verify(password, verifier) {
   const key = await crypto.subtle.importKey("raw", new TextEncoder().encode(String(password || "")), "PBKDF2", false, ["deriveBits"]);
-  const bits = new Uint8Array(await crypto.subtle.deriveBits({ name: "PBKDF2", salt: fromBase64(verifier.salt), iterations: 210000, hash: "SHA-256" }, key, 256));
+  const bits = new Uint8Array(await crypto.subtle.deriveBits({ name: "PBKDF2", salt: fromBase64(verifier.salt), iterations: 100000, hash: "SHA-256" }, key, 256));
   const expected = fromBase64(verifier.hash);
   if (bits.length !== expected.length) return false;
   let result = 0;
