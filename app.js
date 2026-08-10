@@ -33,6 +33,8 @@ const VACCINE_NAMES = {
   other: "Vắc-xin khác",
 };
 
+const SINGLE_DOSE_VACCINES = new Set(["hepb", "bcg", "measles", "mr"]);
+
 const state = {
   user: null,
   entries: [],
@@ -113,6 +115,20 @@ function bindStaticEvents() {
 
     const deleteButton = event.target.closest("[data-delete-entry]");
     if (deleteButton) await deleteCurrentEntry();
+
+    const vaccineAction = event.target.closest("[data-vaccine-action]");
+    if (vaccineAction) {
+      openSheet("vaccine", null, {
+        code: vaccineAction.dataset.vaccineCode,
+        dose: Number(vaccineAction.dataset.vaccineDose || 1),
+        status: vaccineAction.dataset.vaccineAction,
+        occurredAt: vaccineAction.dataset.vaccineDate,
+      });
+    }
+  });
+
+  document.addEventListener("change", (event) => {
+    if (event.target.matches("#vaccine-code, #vaccine-status")) updateVaccineFormVisibility();
   });
 
   window.addEventListener("online", () => { updateNetworkState(); attemptSync(); });
@@ -336,7 +352,12 @@ function describeEntry(entry) {
   if (entry.type === "poo") return { title: `Vệ sinh cá nhân • ${payload.color || "Chưa chọn màu"}`, detail: payload.consistency || "Chưa chọn dạng phân" };
   if (entry.type === "sleep") return { title: `Ngủ ${formatDuration(payload.durationMinutes || 0)}`, detail: `${formatShortTime(payload.startedAt)} – ${formatShortTime(payload.endedAt)}` };
   if (entry.type === "growth") return { title: "Cập nhật số đo", detail: [payload.weight && `${payload.weight} kg`, payload.length && `${payload.length} cm`, payload.head && `vòng đầu ${payload.head} cm`].filter(Boolean).join(" • ") };
-  if (entry.type === "vaccine") return { title: VACCINE_NAMES[payload.code] || payload.name || "Tiêm chủng", detail: `Mũi ${payload.dose || 1}${payload.place ? ` • ${payload.place}` : ""}` };
+  if (entry.type === "vaccine") {
+    const name = payload.customName || VACCINE_NAMES[payload.code] || payload.name || "Tiêm chủng";
+    const dose = SINGLE_DOSE_VACCINES.has(payload.code) ? "" : ` • mũi ${payload.dose || 1}`;
+    if (payload.status === "planned") return { title: `Đổi lịch ${name}${dose}`, detail: `Dự kiến ${formatDate(entry.occurredAt)}` };
+    return { title: `${name}${dose}`, detail: `Đã tiêm/uống${payload.place ? ` • ${payload.place}` : ""}` };
+  }
   return { title: "Hoạt động", detail: "" };
 }
 
@@ -359,7 +380,8 @@ function renderGrowth() {
 }
 
 function vaccineSchedule() {
-  const rotaRecords = state.entries.filter((entry) => entry.type === "vaccine" && entry.payload.code === "rota");
+  const completedRecords = state.entries.filter((entry) => entry.type === "vaccine" && entry.payload.status !== "planned");
+  const rotaRecords = completedRecords.filter((entry) => entry.payload.code === "rota");
   const isThreeDoseRota = rotaRecords.some((entry) => /rotateq|rotasiil|3\s*liều/i.test(entry.payload.productName || ""));
   const rows = [
     { code: "hepb", dose: 1, ageMonths: 0, note: "Trong vòng 24 giờ sau sinh" },
@@ -384,10 +406,9 @@ function vaccineSchedule() {
     { code: "je", dose: 3, ageMonths: 24, previousDose: 1, minMonths: 12, note: "1 năm sau mũi 1" },
   ];
   if (isThreeDoseRota) rows.splice(13, 0, { code: "rota", dose: 3, ageMonths: 4, previousDose: 2, minDays: 28, note: "Theo sản phẩm 3 liều đã nhập" });
-  const records = state.entries.filter((entry) => entry.type === "vaccine");
   return rows.map((row) => {
     let dueAt = addMonths(new Date(PROFILE.birthAt), row.ageMonths);
-    const previous = records.find((entry) => entry.payload.code === row.code && Number(entry.payload.dose) === row.previousDose);
+    const previous = completedRecords.find((entry) => entry.payload.code === row.code && Number(entry.payload.dose) === row.previousDose);
     if (previous) {
       let basedOnActual = new Date(previous.occurredAt);
       if (row.minMonths) basedOnActual = addMonths(basedOnActual, row.minMonths);
@@ -399,78 +420,17 @@ function vaccineSchedule() {
 }
 
 function renderVaccines() {
-  const records = state.entries.filter((entry) => entry.type === "vaccine");
+  const vaccineEntries = state.entries.filter((entry) => entry.type === "vaccine");
+  const records = vaccineEntries.filter((entry) => entry.payload.status !== "planned");
+  const plans = vaccineEntries.filter((entry) => entry.payload.status === "planned");
   const now = new Date();
-  $("#vaccine-list").innerHTML = vaccineSchedule().map((item) => {
+  const schedule = vaccineSchedule();
+  const seriesCounts = schedule.reduce((counts, item) => ({ ...counts, [item.code]: (counts[item.code] || 0) + 1 }), {});
+  const scheduledHtml = schedule.map((item) => {
     const record = records.find((entry) => entry.payload.code === item.code && Number(entry.payload.dose) === item.dose);
-    const days = Math.ceil((item.dueAt - now) / 86400000);
-    const status = record ? "done" : days < 0 ? "due" : days <= 21 ? "soon" : "future";
-    const statusText = record ? `Đã thực hiện ${formatDate(record.occurredAt)}` : days < 0 ? "Cần kiểm tra sổ tiêm" : days === 0 ? "Dự kiến hôm nay" : `Dự kiến ${formatDate(item.dueAt)}`;
-    return `<article class="vaccine-item"><span class="vaccine-status ${status}"></span><div><h3>${escapeHtml(VACCINE_NAMES[item.code])} • mũi ${item.dose}</h3><p>${escapeHtml(statusText)}${item.recalculatedFromActual && !record ? " • Đã tính lại từ mũi thực tế" : ""}${item.note ? ` • ${escapeHtml(item.note)}` : ""}</p></div><time>${record ? "Đã ghi" : formatMonthYear(item.dueAt)}</time></article>`;
-  }).join("");
-}
-
-function renderReport() {
-  const from = new Date();
-  from.setDate(from.getDate() - 6);
-  from.setHours(0, 0, 0, 0);
-  const recent = state.entries.filter((entry) => new Date(entry.occurredAt) >= from);
-  const feed = sum(recent.filter((entry) => entry.type === "feed"), (entry) => entry.payload.amount || 0);
-  const pump = sum(recent.filter((entry) => entry.type === "pump"), (entry) => entry.payload.amount || 0);
-  const poo = recent.filter((entry) => entry.type === "poo").length;
-  $("#report-summary").innerHTML = `<div><strong>${feed}</strong><small>ml bé đã uống</small></div><div><strong>${pump}</strong><small>ml m…30 tokens truncated…ottles() {
-  if (!state.user) return;
-  const now = Date.now();
-  const bottles = state.entries.filter((entry) => {
-    if (entry.type !== "feed" || !entry.payload.leftover || entry.payload.discardedAt) return false;
-    const touched = new Date(entry.payload.touchedAt || entry.occurredAt).getTime();
-    return now - touched < 12 * 3600000;
-  });
-  const section = $("#active-bottles-section");
-  section.classList.toggle("hidden", !bottles.length);
-  $("#active-bottles").innerHTML = bottles.map((entry) => {
-    const deadline = bottleDeadline(entry);
-    const remaining = deadline - now;
-    const expired = remaining <= 0;
-    const milk = entry.payload.milkType === "formula" ? "Sữa công thức" : entry.payload.milkType === "mixed" ? "Sữa trộn" : "Sữa mẹ";
-    return `<article class="bottle-card"><div><h3>${milk} • còn ${entry.payload.leftover} ml</h3><p>${expired ? "Đã quá thời gian dùng an toàn" : `Bé chạm miệng lúc ${formatShortTime(entry.payload.touchedAt)}`}<button class="discard-button" type="button" data-discard="${entry.id}">Bỏ bình này</button></p></div><div class="bottle-clock ${expired ? "expired" : ""}"><small>${expired ? "Trạng thái" : "Còn lại"}</small><strong>${expired ? "Nên bỏ" : formatCountdown(remaining)}</strong></div></article>`;
-  }).join("");
-}
-
-function bottleDeadline(entry) {
-  const payload = entry.payload;
-  if (payload.milkType === "breast") {
-    return new Date(payload.endedAt || payload.touchedAt || entry.occurredAt).getTime() + 120 * 60000;
-  }
-  return new Date(payload.touchedAt || entry.occurredAt).getTime() + 60 * 60000;
-}
-
-async function discardBottle(id) {
-  const entry = await getEntry(id);
-  if (!entry) return;
-  await saveEntry({ ...entry, payload: { ...entry.payload, discardedAt: new Date().toISOString() }, updatedAt: new Date().toISOString(), updatedBy: state.user, version: (entry.version || 1) + 1, syncStatus: "pending" });
-  await refreshData();
-  scheduleSync();
-}
-
-function openSheet(type, entry = null) {
-  state.sheetType = type;
-  state.editingId = entry?.id || null;
-  const titles = {
-    feed: ["CỮ SỮA", entry ? "Sửa cữ bé uống" : "Bé vừa uống"],
-    pump: ["SỮA MẸ", entry ? "Sửa lần hút sữa" : "Mẹ vừa hút sữa"],
-    poo: ["VỆ SINH CÁ NHÂN", entry ? "Sửa lần đi Poo" : "Ghi một lần đi Poo"],
-    sleep: ["GIẤC NGỦ", entry ? "Sửa giấc ngủ" : "Ghi một giấc ngủ"],
-    growth: ["LỚN LÊN", entry ? "Sửa số đo" : "Thêm số đo"],
-    vaccine: ["BẢO VỆ BÉ", entry ? "Sửa thông tin tiêm chủng" : "Ghi mũi đã tiêm hoặc uống"],
-  };
-  $("#sheet-eyebrow").textContent = titles[type][0];
-  $("#sheet-title").textContent = titles[type][1];
-  $("#entry-form").innerHTML = formTemplate(type, entry);
-  $("#entry-form").addEventListener("submit", saveFormEntry);
-  $("#sheet-backdrop").classList.remove("hidden");
-  $("#form-sheet").classList.remove("hidden");
-  document.body.style.overflow = "hidden";
+    const plan = plans.find((entry) => entry.payload.code === item.code && Number(entry.payload.dose) === item.dose);
+    const dueAt = plan ? new Date(plan.occurredAt) : item.dueAt;…1693 tokens truncated… "hidden";
+  if (type === "vaccine") updateVaccineFormVisibility();
   setTimeout(() => $("#entry-form input:not([type=hidden]), #entry-form select")?.focus(), 80);
 }
 
@@ -482,9 +442,9 @@ function closeSheet() {
   state.sheetType = null;
 }
 
-function formTemplate(type, entry) {
-  const payload = entry?.payload || {};
-  const occurred = toLocalInput(entry?.occurredAt || new Date());
+function formTemplate(type, entry, preset = {}) {
+  const payload = { ...preset, ...(entry?.payload || {}) };
+  const occurred = toLocalInput(entry?.occurredAt || preset.occurredAt || new Date());
   const deleteAction = entry ? `<button class="button soft full" type="button" data-delete-entry="${entry.id}">Xóa bản ghi này</button>` : "";
   if (type === "feed") {
     const amount = payload.amount || 0;
@@ -503,8 +463,26 @@ function formTemplate(type, entry) {
   if (type === "poo") return `<fieldset><legend>Màu phân</legend><div class="choice-grid">${["Vàng", "Xanh", "Nâu", "Đen", "Đỏ", "Trắng/nhạt", "Màu khác"].map((value) => choice("color", value, value, payload.color === value || (!payload.color && value === "Vàng"))).join("")}</div></fieldset><fieldset><legend>Dạng phân</legend><div class="choice-grid">${["Lỏng", "Hơi lỏng", "Sệt", "Thành khuôn", "Cứng"].map((value) => choice("consistency", value, value, payload.consistency === value || (!payload.consistency && value === "Sệt"))).join("")}</div></fieldset><label>Thời gian<input name="occurredAt" type="datetime-local" value="${occurred}" required></label><label>Ghi chú<textarea name="note" rows="2">${escapeHtml(payload.note || "")}</textarea></label><button class="button primary full" type="submit">Lưu lần vệ sinh</button>${deleteAction}`;
   if (type === "sleep") return `<div class="field-row"><label>Bắt đầu<input name="startedAt" type="datetime-local" value="${toLocalInput(payload.startedAt || new Date(Date.now() - 60 * 60000))}" required></label><label>Kết thúc<input name="endedAt" type="datetime-local" value="${toLocalInput(payload.endedAt || new Date())}" required></label></div><label>Ghi chú<textarea name="note" rows="2">${escapeHtml(payload.note || "")}</textarea></label><button class="button primary full" type="submit">Lưu giấc ngủ</button>${deleteAction}`;
   if (type === "growth") return `<div class="field-row"><label>Cân nặng (kg)<input name="weight" type="number" min="0.5" max="40" step="0.01" inputmode="decimal" value="${payload.weight || ""}"></label><label>Chiều dài (cm)<input name="length" type="number" min="20" max="150" step="0.1" inputmode="decimal" value="${payload.length || ""}"></label></div><label>Vòng đầu (cm)<input name="head" type="number" min="20" max="80" step="0.1" inputmode="decimal" value="${payload.head || ""}"></label><label>Thời gian đo<input name="occurredAt" type="datetime-local" value="${occurred}" required></label><label>Nơi đo / ghi chú<input name="note" value="${escapeHtml(payload.note || "")}"></label><button class="button primary full" type="submit">Lưu số đo</button>${deleteAction}`;
-  if (type === "vaccine") return `<label>Loại vắc-xin<select name="code">${Object.entries(VACCINE_NAMES).map(([code, name]) => `<option value="${code}" ${payload.code === code ? "selected" : ""}>${name}</option>`).join("")}</select></label><div class="field-row"><label>Mũi số<input name="dose" type="number" min="1" max="20" value="${payload.dose || 1}" required></label><label>Ngày giờ thực tế<input name="occurredAt" type="datetime-local" value="${occurred}" required></label></div><label>Tên sản phẩm (nếu biết)<input name="productName" value="${escapeHtml(payload.productName || "")}" placeholder="Ví dụ: Rotavin, RotaTeq…"></label><label>Nơi tiêm hoặc uống<input name="place" value="${escapeHtml(payload.place || "")}"></label><label>Phản ứng hoặc ghi chú<textarea name="note" rows="2">${escapeHtml(payload.note || "")}</textarea></label><button class="button primary full" type="submit">Lưu thông tin tiêm chủng</button>${deleteAction}`;
+  if (type === "vaccine") return `
+    <label>Trạng thái<select id="vaccine-status" name="status"><option value="done" ${payload.status !== "planned" ? "selected" : ""}>Đã tiêm hoặc uống</option><option value="planned" ${payload.status === "planned" ? "selected" : ""}>Chỉ điều chỉnh lịch dự kiến</option></select></label>
+    <label>Loại vắc-xin<select id="vaccine-code" name="code">${Object.entries(VACCINE_NAMES).map(([code, name]) => `<option value="${code}" ${payload.code === code ? "selected" : ""}>${name}</option>`).join("")}</select></label>
+    <label id="custom-vaccine-name" class="${payload.code === "other" ? "" : "hidden"}">Tên vắc-xin bổ sung<input name="customName" value="${escapeHtml(payload.customName || "")}" placeholder="Ví dụ: COVID-19"></label>
+    <div class="field-row"><label id="vaccine-dose-field" class="${SINGLE_DOSE_VACCINES.has(payload.code) ? "hidden" : ""}">Mũi số<input name="dose" type="number" min="1" max="20" value="${payload.dose || 1}"></label><label><span id="vaccine-date-label">${payload.status === "planned" ? "Ngày giờ dự kiến" : "Ngày giờ thực tế"}</span><input name="occurredAt" type="datetime-local" value="${occurred}" required></label></div>
+    <div id="vaccine-completed-fields" class="stack"><label>Tên sản phẩm (nếu biết)<input name="productName" value="${escapeHtml(payload.productName || "")}" placeholder="Ví dụ: Rotavin, RotaTeq…"></label><label>Nơi tiêm hoặc uống<input name="place" value="${escapeHtml(payload.place || "")}"></label><label>Phản ứng hoặc ghi chú<textarea name="note" rows="2">${escapeHtml(payload.note || "")}</textarea></label></div>
+    <button class="button primary full" type="submit">${payload.status === "planned" ? "Lưu lịch dự kiến" : "Lưu thông tin tiêm chủng"}</button>${deleteAction}`;
   return "";
+}
+
+function updateVaccineFormVisibility() {
+  const code = $("#vaccine-code")?.value;
+  const planned = $("#vaccine-status")?.value === "planned";
+  $("#custom-vaccine-name")?.classList.toggle("hidden", code !== "other");
+  $("#vaccine-dose-field")?.classList.toggle("hidden", SINGLE_DOSE_VACCINES.has(code));
+  if (SINGLE_DOSE_VACCINES.has(code)) $("#vaccine-dose-field input").value = "1";
+  $("#vaccine-completed-fields")?.classList.toggle("hidden", planned);
+  if ($("#vaccine-date-label")) $("#vaccine-date-label").textContent = planned ? "Ngày giờ dự kiến" : "Ngày giờ thực tế";
+  const submit = $("#entry-form button[type=submit]");
+  if (submit) submit.textContent = planned ? "Lưu lịch dự kiến" : "Lưu thông tin tiêm chủng";
 }
 
 function choice(name, value, label, checked) {
@@ -530,10 +508,11 @@ async function saveFormEntry(event) {
   event.preventDefault();
   const form = event.currentTarget;
   const data = new FormData(form);
-  const existing = state.editingId ? await getEntry(state.editingId) : null;
+  let existing = state.editingId ? await getEntry(state.editingId) : null;
   const now = new Date().toISOString();
   let occurredAt = fromLocalInput(data.get("occurredAt") || data.get("touchedAt") || data.get("startedAt"));
   let payload;
+  let vaccinePlanToRemove = null;
 
   if (state.sheetType === "feed") {
     const amount = Number(data.get("amount") || $("#custom-amount")?.value || 0);
@@ -555,7 +534,27 @@ async function saveFormEntry(event) {
     payload = { weight: numberOrNull(data.get("weight")), length: numberOrNull(data.get("length")), head: numberOrNull(data.get("head")), note: data.get("note")?.trim() || "" };
     if (!payload.weight && !payload.length && !payload.head) return showToast("Hãy nhập ít nhất một số đo.");
   } else if (state.sheetType === "vaccine") {
-    payload = { code: data.get("code"), dose: Number(data.get("dose")), productName: data.get("productName")?.trim() || "", place: data.get("place")?.trim() || "", note: data.get("note")?.trim() || "" };
+    const code = data.get("code");
+    const status = data.get("status") === "planned" ? "planned" : "done";
+    const customName = data.get("customName")?.trim() || "";
+    if (code === "other" && !customName) return showToast("Hãy nhập tên vắc-xin bổ sung.");
+    const dose = SINGLE_DOSE_VACCINES.has(code) ? 1 : Number(data.get("dose") || 1);
+    payload = { code, dose, status, customName, productName: data.get("productName")?.trim() || "", place: data.get("place")?.trim() || "", note: data.get("note")?.trim() || "" };
+    if (!existing) {
+      existing = state.entries.find((entry) => entry.type === "vaccine"
+        && entry.payload.code === code
+        && Number(entry.payload.dose || 1) === dose
+        && (entry.payload.status === "planned" ? "planned" : "done") === status
+        && (code !== "other" || (entry.payload.customName || "").toLowerCase() === customName.toLowerCase())) || null;
+    }
+    if (status === "done") {
+      vaccinePlanToRemove = state.entries.find((entry) => entry.type === "vaccine"
+        && entry.id !== existing?.id
+        && entry.payload.status === "planned"
+        && entry.payload.code === code
+        && Number(entry.payload.dose || 1) === dose
+        && (code !== "other" || (entry.payload.customName || "").toLowerCase() === customName.toLowerCase())) || null;
+    }
   }
 
   const entry = {
@@ -574,6 +573,7 @@ async function saveFormEntry(event) {
   };
 
   await saveEntry(entry);
+  if (vaccinePlanToRemove) await softDeleteEntry(vaccinePlanToRemove.id, state.user);
   closeSheet();
   await refreshData();
   showToast(payload?.isLastPump ? "Mẹ Quyên hoàn thành ca làm sữa rồi! ♥" : existing ? "Đã lưu thay đổi" : "Đã thêm vào nhật ký");
