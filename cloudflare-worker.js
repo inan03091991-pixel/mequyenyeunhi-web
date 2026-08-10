@@ -1,1 +1,1 @@
-export { default } from "./cloudflare-proxy/worker.js";
+export { default } from "./worker/index.js";
