@@ -1,4 +1,3 @@
-
 <!doctype html>
 <html lang="vi">
   <head>
@@ -69,15 +68,20 @@
                 <span class="metric-icon" aria-hidden="true">◒</span><strong id="metric-feed">0 ml</strong><small>Bé đã uống</small>
               </button>
               <button class="metric-card lilac" type="button" data-open="pump">
-                <span class="metric-icon" aria-hidden="true">◉</span><strong id="metric-pump">0 ml</strong><small>Sữa mẹ đã hút</small>
+                <span class="metric-icon" aria-hidden="true">◉</span><strong id="metric-pump">0 ml</strong><small>Mẹ đã hút</small>
               </button>
               <button class="metric-card sage" type="button" data-open="poo">
-                <span class="metric-icon" aria-hidden="true">✦</span><strong id="metric-poo">0 lần</strong><small>Đi ngoài</small>
+                <span class="metric-icon" aria-hidden="true">✦</span><strong id="metric-poo">0 lần</strong><small>Vệ sinh cá nhân</small>
               </button>
               <button class="metric-card sky" type="button" data-open="sleep">
                 <span class="metric-icon" aria-hidden="true">☾</span><strong id="metric-sleep">0 phút</strong><small>Thời gian ngủ</small>
               </button>
             </div>
+          </section>
+
+          <section id="daily-insights-section" class="section-block hidden">
+            <div class="section-heading"><div><p class="eyebrow">LỜI NHẮN NHỎ</p><h2>Nhà mình hôm nay</h2></div></div>
+            <div id="daily-insights" class="insight-list"></div>
           </section>
 
           <section id="active-bottles-section" class="section-block hidden">
@@ -90,9 +94,9 @@
             <div class="quick-actions">
               <button type="button" data-open="feed"><span>◒</span>Bé uống</button>
               <button type="button" data-open="pump"><span>◉</span>Hút sữa</button>
-              <button type="button" data-open="poo"><span>✦</span>Đi ngoài</button>
+              <button type="button" data-open="poo"><span>✦</span>Vệ sinh cá nhân</button>
               <button type="button" data-open="sleep"><span>☾</span>Ngủ</button>
-              <button type="button" data-open="growth"><span>↗</span>Đo cơ thể</button>
+              <button type="button" data-open="growth"><span>↗</span>Cân &amp; đo</button>
               <button type="button" data-open="vaccine"><span>＋</span>Tiêm chủng</button>
             </div>
           </section>
@@ -106,7 +110,7 @@
         <section id="page-timeline" class="page" data-page="timeline">
           <div class="page-title"><p class="eyebrow">NHẬT KÝ</p><h2>Dòng thời gian</h2><p class="muted">Mọi thay đổi đều lưu người nhập và thời gian thực tế.</p></div>
           <div class="filter-row" role="group" aria-label="Lọc nhật ký">
-            <button class="chip selected" type="button" data-filter="all">Tất cả</button><button class="chip" type="button" data-filter="feed">Bé uống sữa</button><button class="chip" type="button" data-filter="pump">Hút sữa</button><button class="chip" type="button" data-filter="poo">Đi ngoài</button><button class="chip" type="button" data-filter="sleep">Giấc ngủ</button>
+            <button class="chip selected" type="button" data-filter="all">Tất cả</button><button class="chip" type="button" data-filter="feed">Bé uống sữa</button><button class="chip" type="button" data-filter="pump">Hút sữa</button><button class="chip" type="button" data-filter="poo">Vệ sinh cá nhân</button><button class="chip" type="button" data-filter="sleep">Giấc ngủ</button>
           </div>
           <div id="full-timeline" class="timeline empty-state">Chưa có dữ liệu.</div>
         </section>
@@ -119,13 +123,13 @@
         </section>
 
         <section id="page-vaccine" class="page" data-page="vaccine">
-          <div class="page-title with-action"><div><p class="eyebrow">BẢO VỆ BÉ</p><h2>Lịch tiêm chủng</h2></div><button class="button soft" type="button" data-open="vaccine">＋ Ghi mũi đã tiêm/uống</button></div>
+          <div class="page-title with-action"><div><p class="eyebrow">BẢO VỆ BÉ</p><h2>Lịch tiêm chủng</h2></div><button class="button soft" type="button" data-open="vaccine">＋ Thêm lần tiêm/uống</button></div>
           <div class="notice-card"><strong>Lịch tham khảo</strong><p>Dựa trên Thông tư 52/2025/TT-BYT. Ngày thực tế và sản phẩm sẽ quyết định mũi tiếp theo.</p></div>
           <div id="vaccine-list" class="vaccine-list"></div>
         </section>
 
         <section id="page-more" class="page" data-page="more">
-          <div class="page-title"><p class="eyebrow">TỔNG HỢP</p><h2>Báo cáo & cài đặt</h2></div>
+          <div class="page-title"><p class="eyebrow">TỔNG HỢP</p><h2>Báo cáo và cài đặt</h2></div>
           <article class="report-card">
             <p class="eyebrow">7 NGÀY GẦN NHẤT</p><div id="report-summary" class="report-numbers"></div>
             <div class="button-row"><button id="export-csv" class="button soft" type="button">Bảng dữ liệu</button><button id="export-json" class="button soft" type="button">Dữ liệu cho AI</button><button id="print-report" class="button primary" type="button">In hoặc lưu PDF</button></div>
