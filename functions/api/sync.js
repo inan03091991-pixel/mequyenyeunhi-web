@@ -1,4 +1,3 @@
-
 export async function onRequestPost(context) {
   const auth = await authenticatedUser(context);
   if (!auth) return json({ error: "unauthorized" }, 401);
@@ -34,22 +33,14 @@ export async function onRequestPost(context) {
 
 async function applyChange(db, incoming, username) {
   const existingRow = await db.prepare("SELECT data_json, version FROM entries WHERE id = ?").bind(incoming.id).first();
-  let entry = { ...incoming, updatedBy: username, syncStatus: "synced" };
+  const entry = { ...incoming, updatedBy: username, syncStatus: "synced" };
 
   if (existingRow) {
     const existing = JSON.parse(existingRow.data_json);
-    const samePayload = JSON.stringify(existing.payload) === JSON.stringify(incoming.payload) && Boolean(existing.deleted) === Boolean(incoming.deleted);
-    if (!samePayload && Number(incoming.version || 1) <= Number(existingRow.version || 1)) {
-      entry = {
-        ...entry,
-        id: `${incoming.id}--conflict--${crypto.randomUUID()}`,
-        conflictOf: incoming.id,
-        version: 1,
-        createdAt: new Date().toISOString(),
-      };
-    } else if (Number(incoming.version || 1) < Number(existingRow.version || 1)) {
-      return;
-    }
+    const incomingUpdatedAt = new Date(incoming.updatedAt).getTime();
+    const existingUpdatedAt = new Date(existing.updatedAt).getTime();
+    if (Number.isFinite(existingUpdatedAt) && incomingUpdatedAt <= existingUpdatedAt) return;
+    entry.version = Math.max(Number(incoming.version || 1), Number(existingRow.version || 1) + 1);
   }
 
   await db.batch([
