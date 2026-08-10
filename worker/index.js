@@ -1,15 +1,17 @@
-
 import { onRequestPost as login } from "../functions/api/login.js";
 import { onRequestPost as logout } from "../functions/api/logout.js";
 import { onRequestPost as sync } from "../functions/api/sync.js";
 
-const DEFAULT_ALLOWED_ORIGIN = "https://inan03091991-pixel.github.io";
+const DEFAULT_ALLOWED_ORIGINS = new Set([
+  "https://inan03091991-pixel.github.io",
+  "https://hy-nhi-care.tonynguyen2409.chatgpt.site",
+]);
 
 export default {
   async fetch(request, env) {
     const origin = request.headers.get("Origin") || "";
-    const allowedOrigin = env.ALLOWED_ORIGIN || DEFAULT_ALLOWED_ORIGIN;
-    if (request.method === "OPTIONS") return preflight(origin, allowedOrigin);
+    const allowedOrigins = getAllowedOrigins(env);
+    if (request.method === "OPTIONS") return preflight(origin, allowedOrigins);
 
     const url = new URL(request.url);
     let response;
@@ -19,12 +21,20 @@ export default {
     else if (request.method === "GET" && url.pathname === "/api/health") response = json({ ok: true });
     else response = json({ error: "not_found" }, 404);
 
-    return withCors(response, origin, allowedOrigin);
+    return withCors(response, origin, allowedOrigins);
   },
 };
 
-function preflight(origin, allowedOrigin) {
-  if (origin !== allowedOrigin) return new Response(null, { status: 403 });
+function getAllowedOrigins(env) {
+  const configuredOrigins = String(env.ALLOWED_ORIGINS || env.ALLOWED_ORIGIN || "")
+    .split(",")
+    .map(value => value.trim())
+    .filter(Boolean);
+  return new Set([...DEFAULT_ALLOWED_ORIGINS, ...configuredOrigins]);
+}
+
+function preflight(origin, allowedOrigins) {
+  if (!allowedOrigins.has(origin)) return new Response(null, { status: 403 });
   return new Response(null, {
     status: 204,
     headers: {
@@ -37,12 +47,12 @@ function preflight(origin, allowedOrigin) {
   });
 }
 
-function withCors(response, origin, allowedOrigin) {
+function withCors(response, origin, allowedOrigins) {
   const headers = new Headers(response.headers);
   headers.set("X-Content-Type-Options", "nosniff");
   headers.set("Referrer-Policy", "no-referrer");
   headers.set("Cache-Control", "no-store");
-  if (origin === allowedOrigin) {
+  if (allowedOrigins.has(origin)) {
     headers.set("Access-Control-Allow-Origin", origin);
     headers.set("Vary", "Origin");
   }
