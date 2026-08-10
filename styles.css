@@ -75,6 +75,13 @@ input:focus, select:focus, textarea:focus { border-color: #d96889; box-shadow: 0
 .metric-card .metric-icon { width: 30px; height: 30px; display: grid; place-items: center; border-radius: 10px; background: rgba(255,255,255,.58); color: #ae4f6d; font-size: 1rem; }
 .metric-card strong { align-self: end; margin-top: 12px; font-size: 1.42rem; font-weight: 780; letter-spacing: -.025em; }
 .metric-card small { color: #7b6570; font-size: .72rem; font-weight: 600; }
+.insight-list { display: grid; gap: 10px; }
+.insight-card { display: grid; grid-template-columns: 42px 1fr; gap: 12px; align-items: start; padding: 15px; border: 1px solid #f0d8e1; border-radius: 19px; background: linear-gradient(135deg,#fff7fa,#fcebf1); box-shadow: 0 8px 24px rgba(125,66,88,.05); }
+.insight-card.happy, .insight-card.love { background: linear-gradient(135deg,#fff2f6,#fbe1ea); }
+.insight-card.sad { background: linear-gradient(135deg,#fff8f9,#f8eef2); }
+.insight-icon { width: 42px; height: 42px; display: grid; place-items: center; border-radius: 14px; background: rgba(255,255,255,.76); color: #b54f71; font-size: 1.25rem; }
+.insight-card strong { display: block; margin-top: 1px; font-size: .84rem; }
+.insight-card p { margin: 5px 0 0; color: #765f69; font-size: .73rem; line-height: 1.5; }
 .quick-actions { display: grid; grid-template-columns: repeat(3,1fr); gap: 9px; }
 .quick-actions button { min-height: 88px; display: grid; place-items: center; align-content: center; gap: 8px; border: 1px solid var(--line); border-radius: 18px; background: var(--surface); font-size: .71rem; font-weight: 760; box-shadow: 0 7px 22px rgba(125,66,88,.045); }
 .quick-actions span { width: 30px; height: 30px; display: grid; place-items: center; border-radius: 10px; background: var(--coral-soft); color: #b65371; font-size: 1rem; }
@@ -154,6 +161,11 @@ input:focus, select:focus, textarea:focus { border-color: #d96889; box-shadow: 0
 .amount-grid .choice-label { min-height: 45px; font-size: .82rem; font-weight: 800; }
 .amount-grid .amount-selected { border-color: var(--coral); background: var(--coral-soft); color: #964e44; box-shadow: inset 0 0 0 1px var(--coral); }
 .field-help { margin: -5px 0 0; color: var(--muted); font-size: .68rem; line-height: 1.45; }
+.check-card { display: flex; align-items: center; gap: 11px; padding: 13px; border: 1px solid var(--line); border-radius: 15px; background: var(--surface); }
+.check-card input { width: 20px; height: 20px; margin: 0; accent-color: var(--coral); }
+.check-card span { display: grid; gap: 3px; }
+.check-card strong { font-size: .76rem; }
+.check-card small { color: var(--muted); font-size: .67rem; line-height: 1.35; }
 .countdown-preview { padding: 14px; border-radius: 16px; background: var(--sky-soft); color: #526d78; font-size: .75rem; line-height: 1.5; }
 .bottle-card { display: grid; grid-template-columns: 1fr auto; gap: 14px; border-color:#eed9e1; box-shadow:0 8px 24px rgba(125,66,88,.05); }
 .bottle-card h3 { margin: 0; font-size: .84rem; }
