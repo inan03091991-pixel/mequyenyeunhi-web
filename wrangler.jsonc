@@ -4,6 +4,13 @@
   "main": "cloudflare-worker.js",
   "compatibility_date": "2026-08-10",
   "compatibility_flags": ["nodejs_compat"],
+  "d1_databases": [
+    {
+      "binding": "DB",
+      "database_name": "hy-nhi-care-db",
+      "database_id": "daaf11cb-978f-47e4-a5bc-b159a70d7959"
+    }
+  ],
   "observability": {
     "enabled": true,
     "head_sampling_rate": 1
