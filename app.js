@@ -418,10 +418,7 @@ function renderReport() {
   const feed = sum(recent.filter((entry) => entry.type === "feed"), (entry) => entry.payload.amount || 0);
   const pump = sum(recent.filter((entry) => entry.type === "pump"), (entry) => entry.payload.amount || 0);
   const poo = recent.filter((entry) => entry.type === "poo").length;
-  $("#report-summary").innerHTML = `<div><strong>${feed}</strong><small>ml bé đã uống</small></div><div><strong>${pump}</strong><small>ml mẹ đã hút</small></div><div><strong>${poo}</strong><small>lần vệ sinh</small></div>`;
-}
-
-function renderActiveBottles() {
+  $("#report-summary").innerHTML = `<div><strong>${feed}</strong><small>ml bé đã uống</small></div><div><strong>${pump}</strong><small>ml m…30 tokens truncated…ottles() {
   if (!state.user) return;
   const now = Date.now();
   const bottles = state.entries.filter((entry) => {
@@ -622,11 +619,16 @@ async function updateNetworkState(result = null) {
   } else if (result?.status === "auth") {
     dot.classList.add("pending");
     $("#sync-label").textContent = "Cần đăng nhập lại";
+  } else if (result?.status === "local") {
+    dot.classList.add("pending");
+    $("#sync-label").textContent = "Chưa nối máy chủ";
+  } else if (result?.status === "synced") {
+    $("#sync-label").textContent = "Đã đồng bộ";
   } else if (pending) {
     dot.classList.add("pending");
     $("#sync-label").textContent = `${pending} chờ đồng bộ`;
   } else {
-    $("#sync-label").textContent = "Đã lưu";
+    $("#sync-label").textContent = "Đã lưu trên máy";
   }
 }
 
