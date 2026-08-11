@@ -1,4 +1,4 @@
-const CACHE_NAME = "hy-nhi-care-v19";
+const CACHE_NAME = "hy-nhi-care-v20";
 const APP_SHELL = [
   "./",
   "./index.html",
