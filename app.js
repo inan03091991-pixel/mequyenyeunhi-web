@@ -52,10 +52,10 @@ const API_BASE = String(globalThis.HY_NHI_CONFIG?.apiBase || "").replace(/\/$/, 
 document.addEventListener("DOMContentLoaded", init);
 
 async function init() {
-  await openDatabase();
   bindStaticEvents();
   updateNetworkState();
   updateGreeting();
+  await openDatabase();
   const savedTheme = localStorage.getItem("hynhi_theme");
   if (savedTheme === "dark") document.body.classList.add("dark");
 
