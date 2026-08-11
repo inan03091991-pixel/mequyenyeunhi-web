@@ -40,7 +40,8 @@ const state = {
   user: null,
   entries: [],
   page: "today",
-  filter: "all",
+  selectedDay: null,
+  lastCalendarDay: null,
   editingId: null,
   sheetType: null,
   syncTimer: null,
@@ -53,6 +54,8 @@ const API_BASE = String(globalThis.HY_NHI_CONFIG?.apiBase || "").replace(/\/$/, 
 document.addEventListener("DOMContentLoaded", init);
 
 async function init() {
+  state.selectedDay = localDateKey(new Date());
+  state.lastCalendarDay = state.selectedDay;
   bindStaticEvents();
   updateNetworkState();
   updateGreeting();
@@ -73,6 +76,7 @@ async function init() {
   }
 
   setInterval(renderActiveBottles, 1000);
+  setInterval(checkCalendarDayChange, 30000);
 }
 
 function bindStaticEvents() {
@@ -95,11 +99,17 @@ function bindStaticEvents() {
     const navButton = event.target.closest("[data-nav],[data-go]");
     if (navButton) navigate(navButton.dataset.nav || navButton.dataset.go);
 
-    const filterButton = event.target.closest("[data-filter]");
-    if (filterButton) {
-      state.filter = filterButton.dataset.filter;
-      $$("[data-filter]").forEach((button) => button.classList.toggle("selected", button === filterButton));
-      renderTimeline();
+    const dayShift = event.target.closest("[data-day-shift]");
+    if (dayShift) {
+      const date = dateFromKey(state.selectedDay || localDateKey(new Date()));
+      date.setDate(date.getDate() + Number(dayShift.dataset.dayShift));
+      state.selectedDay = localDateKey(date);
+      renderDailyOverview();
+    }
+
+    if (event.target.closest("#daily-today")) {
+      state.selectedDay = localDateKey(new Date());
+      renderDailyOverview();
     }
 
     const editButton = event.target.closest("[data-edit]");
@@ -134,6 +144,10 @@ function bindStaticEvents() {
 
   document.addEventListener("change", (event) => {
     if (event.target.matches("#vaccine-code, #vaccine-status")) updateVaccineFormVisibility();
+    if (event.target.matches("#daily-date") && event.target.value) {
+      state.selectedDay = event.target.value;
+      renderDailyOverview();
+    }
   });
 
   window.addEventListener("online", () => { updateNetworkState(); attemptSync(); });
@@ -243,7 +257,7 @@ async function refreshData() {
 function renderAll() {
   renderTodayMetrics();
   renderDailyInsights();
-  renderTimeline();
+  renderDailyOverview();
   renderGrowth();
   renderVaccines();
   renderReport();
@@ -262,6 +276,9 @@ function totalsForDay(date) {
     feed: sum(entries.filter((item) => item.type === "feed"), (item) => item.payload.amount || 0),
     pump: sum(entries.filter((item) => item.type === "pump"), (item) => item.payload.amount || 0),
     poo: entries.filter((item) => item.type === "poo").length,
+    sleepMinutes: sum(entries.filter((item) => item.type === "sleep"), (item) => item.payload.durationMinutes || 0),
+    feedCount: entries.filter((item) => item.type === "feed").length,
+    pumpCount: entries.filter((item) => item.type === "pump").length,
   };
 }
 
@@ -325,16 +342,62 @@ function renderTodayMetrics() {
   $("#metric-poo").textContent = `${poo} lần`;
   $("#metric-sleep").textContent = formatDuration(sleepMinutes);
 
-  const recent = state.entries.slice(0, 5);
-  $("#recent-timeline").classList.toggle("empty-state", !recent.length);
-  $("#recent-timeline").innerHTML = recent.length ? recent.map(timelineItem).join("") : "Chưa có hoạt động. Hãy nhập cữ đầu tiên của bé.";
 }
 
-function renderTimeline() {
-  const filtered = state.entries.filter((entry) => state.filter === "all" || entry.type === state.filter);
-  const target = $("#full-timeline");
-  target.classList.toggle("empty-state", !filtered.length);
-  target.innerHTML = filtered.length ? filtered.map(timelineItem).join("") : "Chưa có dữ liệu phù hợp.";
+function dateFromKey(key) {
+  const [year, month, day] = String(key).split("-").map(Number);
+  return new Date(year, month - 1, day, 12);
+}
+
+function renderDailyOverview() {
+  const selectedKey = state.selectedDay || localDateKey(new Date());
+  const selectedDate = dateFromKey(selectedKey);
+  const previousDate = new Date(selectedDate);
+  previousDate.setDate(previousDate.getDate() - 1);
+  const totals = totalsForDay(selectedDate);
+  const previous = totalsForDay(previousDate);
+  const dateInput = $("#daily-date");
+  if (!dateInput) return;
+  dateInput.value = selectedKey;
+  $("#daily-date-heading").textContent = selectedKey === localDateKey(new Date()) ? "Hôm nay" : new Intl.DateTimeFormat("vi-VN", { weekday: "long", day: "numeric", month: "long", year: "numeric" }).format(selectedDate);
+  $("#daily-feed").textContent = `${totals.feed} ml`;
+  $("#daily-feed-count").textContent = `${totals.feedCount} cữ`;
+  $("#daily-pump").textContent = `${totals.pump} ml`;
+  $("#daily-pump-count").textContent = `${totals.pumpCount} ca`;
+  $("#daily-poo").textContent = `${totals.poo} lần`;
+  $("#daily-sleep").textContent = formatDuration(totals.sleepMinutes);
+
+  const summary = [];
+  if (totals.entries.length) {
+    summary.push(`Hỷ Nhi đã uống ${totals.feed} ml qua ${totals.feedCount} cữ. Mẹ Quyên hút được ${totals.pump} ml qua ${totals.pumpCount} ca. Bé ngủ ${formatDuration(totals.sleepMinutes)} và đi Poo ${totals.poo} lần.`);
+    if (previous.feed > 0 && totals.feed !== previous.feed) summary.push(`Lượng sữa bé uống ${totals.feed > previous.feed ? "nhiều hơn" : "ít hơn"} hôm trước ${Math.abs(totals.feed - previous.feed)} ml.`);
+    if (previous.pump > 0 && totals.pump !== previous.pump) summary.push(`Lượng sữa mẹ hút ${totals.pump > previous.pump ? "nhiều hơn" : "ít hơn"} hôm trước ${Math.abs(totals.pump - previous.pump)} ml.`);
+    if (totals.poo === 0) summary.push("Nhật ký ngày này chưa ghi nhận lần đi Poo nào.");
+  } else {
+    summary.push("Ngày này chưa có dữ liệu. Khi ba mẹ ghi một hoạt động, phần tổng quan sẽ tự cập nhật tại đây.");
+  }
+  $("#daily-summary").innerHTML = `<strong>Tổng quan trong ngày</strong><p>${escapeHtml(summary.join(" "))}</p>`;
+  const target = $("#daily-activities");
+  target.classList.toggle("empty-state", !totals.entries.length);
+  target.innerHTML = totals.entries.length ? totals.entries.map(dailyActivityItem).join("") : "Ngày này chưa có dữ liệu.";
+}
+
+function dailyActivityItem(entry) {
+  const description = describeEntry(entry);
+  const icons = { feed: "◒", pump: "◉", poo: "✦", sleep: "☾", growth: "↗", vaccine: "◇" };
+  return `<article class="timeline-item"><div class="timeline-icon" aria-hidden="true">${icons[entry.type] || "•"}</div><div><strong>${escapeHtml(description.title)}</strong><small>${escapeHtml(description.detail)}${entry.createdBy ? ` • ${escapeHtml(entry.createdBy)}` : ""}</small></div><div class="timeline-time"><small>${formatShortTime(entry.occurredAt)}</small><button type="button" data-edit="${entry.id}">Sửa</button></div></article>`;
+}
+
+function checkCalendarDayChange() {
+  const today = localDateKey(new Date());
+  if (today === state.lastCalendarDay) return;
+  const wasViewingToday = !state.selectedDay || state.selectedDay === state.lastCalendarDay;
+  state.lastCalendarDay = today;
+  if (wasViewingToday) state.selectedDay = today;
+  updateGreeting();
+  renderTodayMetrics();
+  renderDailyInsights();
+  renderDailyOverview();
 }
 
 function timelineItem(entry) {
