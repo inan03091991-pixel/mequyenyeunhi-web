@@ -101,18 +101,26 @@
             </div>
           </section>
 
-          <section class="section-block">
-            <div class="section-heading"><div><p class="eyebrow">DÒNG THỜI GIAN</p><h2>Gần đây</h2></div><button class="text-button" type="button" data-go="timeline">Xem tất cả</button></div>
-            <div id="recent-timeline" class="timeline empty-state">Chưa có hoạt động. Hãy nhập cữ đầu tiên của bé.</div>
-          </section>
         </section>
 
         <section id="page-timeline" class="page" data-page="timeline">
-          <div class="page-title"><p class="eyebrow">NHẬT KÝ</p><h2>Dòng thời gian</h2><p class="muted">Mọi thay đổi đều lưu người nhập và thời gian thực tế.</p></div>
-          <div class="filter-row" role="group" aria-label="Lọc nhật ký">
-            <button class="chip selected" type="button" data-filter="all">Tất cả</button><button class="chip" type="button" data-filter="feed">Bé uống sữa</button><button class="chip" type="button" data-filter="pump">Hút sữa</button><button class="chip" type="button" data-filter="poo">Vệ sinh cá nhân</button><button class="chip" type="button" data-filter="sleep">Giấc ngủ</button>
+          <div class="page-title"><p class="eyebrow">XEM THEO NGÀY</p><h2>Mỗi ngày của Hỷ Nhi</h2><p class="muted">Sữa, giấc ngủ và sinh hoạt được gom gọn theo từng ngày.</p></div>
+          <div class="day-picker">
+            <button type="button" data-day-shift="-1" aria-label="Xem ngày trước">‹</button>
+            <label for="daily-date"><span>Ngày muốn xem</span><input id="daily-date" type="date"></label>
+            <button type="button" data-day-shift="1" aria-label="Xem ngày sau">›</button>
           </div>
-          <div id="full-timeline" class="timeline empty-state">Chưa có dữ liệu.</div>
+          <button id="daily-today" class="daily-today" type="button">Về hôm nay</button>
+          <div id="daily-date-heading" class="daily-date-heading"></div>
+          <div class="daily-metric-grid">
+            <article class="daily-metric-card"><span>Bé uống</span><strong id="daily-feed">0 ml</strong><small id="daily-feed-count">0 cữ</small></article>
+            <article class="daily-metric-card"><span>Mẹ hút</span><strong id="daily-pump">0 ml</strong><small id="daily-pump-count">0 ca</small></article>
+            <article class="daily-metric-card"><span>Vệ sinh cá nhân</span><strong id="daily-poo">0 lần</strong><small>Đi Poo</small></article>
+            <article class="daily-metric-card"><span>Giấc ngủ</span><strong id="daily-sleep">0 phút</strong><small>Tổng thời gian</small></article>
+          </div>
+          <article id="daily-summary" class="daily-summary"></article>
+          <div class="section-heading daily-activity-heading"><div><p class="eyebrow">SINH HOẠT TRONG NGÀY</p><h2>Các hoạt động đã ghi</h2></div></div>
+          <div id="daily-activities" class="timeline empty-state">Ngày này chưa có dữ liệu.</div>
         </section>
 
         <section id="page-growth" class="page" data-page="growth">
@@ -145,7 +153,7 @@
 
       <nav class="bottom-nav" aria-label="Điều hướng chính">
         <button class="active" type="button" data-nav="today"><span>⌂</span>Hôm nay</button>
-        <button type="button" data-nav="timeline"><span>≡</span>Nhật ký</button>
+        <button type="button" data-nav="timeline"><span>▦</span>Theo ngày</button>
         <button id="main-add" class="main-add" type="button" aria-label="Nhập nhanh">＋</button>
         <button type="button" data-nav="growth"><span>↗</span>Tăng trưởng</button>
         <button type="button" data-nav="vaccine"><span>◇</span>Tiêm chủng</button>
@@ -161,7 +169,7 @@
     </section>
 
     <div id="toast" class="toast hidden" role="status"></div>
-    <script src="./config.js?v=18"></script>
-    <script type="module" src="./app.js?v=18"></script>
+    <script src="./config.js?v=19"></script>
+    <script type="module" src="./app.js?v=19"></script>
   </body>
 </html>
