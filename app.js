@@ -45,6 +45,7 @@ const state = {
   editingId: null,
   sheetType: null,
   syncTimer: null,
+  syncInFlight: false,
 };
 
 const $ = (selector, root = document) => root.querySelector(selector);
@@ -78,6 +79,7 @@ async function init() {
 
   setInterval(renderActiveBottles, 1000);
   setInterval(checkCalendarDayChange, 30000);
+  setInterval(() => backgroundSync(), 10000);
 }
 
 function lockMobileViewport() {
@@ -157,8 +159,12 @@ function bindStaticEvents() {
     }
   });
 
-  window.addEventListener("online", () => { updateNetworkState(); attemptSync(); });
+  window.addEventListener("online", () => { updateNetworkState(); backgroundSync(); });
   window.addEventListener("offline", updateNetworkState);
+  document.addEventListener("visibilitychange", () => {
+    if (document.visibilityState === "visible") backgroundSync();
+  });
+  window.addEventListener("pageshow", backgroundSync);
 }
 
 async function handleLogin(event) {
@@ -793,15 +799,25 @@ function scheduleSync() {
   updateNetworkState();
 }
 
+function backgroundSync() {
+  if (!state.user || !navigator.onLine || state.sheetType || document.visibilityState === "hidden") return;
+  attemptSync();
+}
+
 async function attemptSync(showResult = false) {
-  if (!state.user) return;
-  const result = await syncData(state.user);
-  updateNetworkState(result);
-  if (result.status === "synced") {
-    await refreshData();
-    if (showResult) showToast("Dữ liệu đã đồng bộ");
-  } else if (showResult) {
-    showToast(navigator.onLine ? "Đã lưu trên máy, máy chủ đồng bộ chưa được kết nối" : "Đang offline • dữ liệu đã lưu trên máy");
+  if (!state.user || state.syncInFlight) return;
+  state.syncInFlight = true;
+  try {
+    const result = await syncData(state.user);
+    updateNetworkState(result);
+    if (result.status === "synced") {
+      await refreshData();
+      if (showResult) showToast("Dữ liệu đã đồng bộ");
+    } else if (showResult) {
+      showToast(navigator.onLine ? "Đã lưu trên máy, máy chủ đồng bộ chưa được kết nối" : "Đang offline • dữ liệu đã lưu trên máy");
+    }
+  } finally {
+    state.syncInFlight = false;
   }
 }
 
