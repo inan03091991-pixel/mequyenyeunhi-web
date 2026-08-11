@@ -54,6 +54,7 @@ const API_BASE = String(globalThis.HY_NHI_CONFIG?.apiBase || "").replace(/\/$/, 
 document.addEventListener("DOMContentLoaded", init);
 
 async function init() {
+  lockMobileViewport();
   state.selectedDay = localDateKey(new Date());
   state.lastCalendarDay = state.selectedDay;
   bindStaticEvents();
@@ -77,6 +78,12 @@ async function init() {
 
   setInterval(renderActiveBottles, 1000);
   setInterval(checkCalendarDayChange, 30000);
+}
+
+function lockMobileViewport() {
+  document.addEventListener("gesturestart", (event) => event.preventDefault(), { passive: false });
+  document.addEventListener("gesturechange", (event) => event.preventDefault(), { passive: false });
+  document.addEventListener("gestureend", (event) => event.preventDefault(), { passive: false });
 }
 
 function bindStaticEvents() {
