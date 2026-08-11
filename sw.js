@@ -1,4 +1,4 @@
-const CACHE_NAME = "hy-nhi-care-v15";
+const CACHE_NAME = "hy-nhi-care-v18";
 const APP_SHELL = [
   "./",
   "./index.html",
@@ -45,4 +45,3 @@ self.addEventListener("fetch", (event) => {
     })
   );
 });
-
