@@ -22,7 +22,7 @@ let PROFILE = {
 const VACCINE_NAMES = {
   hepb: "Viêm gan B sơ sinh",
   bcg: "Lao (BCG)",
-  combo: "Vắc-xin phối hợp DPT–VGB–Hib",
+  combo: "Vắc-xin 6 trong 1",
   opv: "Bại liệt uống (OPV)",
   ipv: "Bại liệt tiêm (IPV)",
   rota: "Rota",
@@ -34,6 +34,7 @@ const VACCINE_NAMES = {
 };
 
 const SINGLE_DOSE_VACCINES = new Set(["hepb", "bcg", "measles", "mr"]);
+const HIDDEN_VACCINE_CODES = new Set(["opv", "ipv"]);
 
 const state = {
   user: null,
@@ -394,11 +395,6 @@ function vaccineSchedule() {
     { code: "combo", dose: 2, ageMonths: 3, previousDose: 1, minDays: 28 },
     { code: "combo", dose: 3, ageMonths: 4, previousDose: 2, minDays: 28 },
     { code: "combo", dose: 4, ageMonths: 18, previousDose: 3, minMonths: 6, note: "Mũi nhắc" },
-    { code: "opv", dose: 1, ageMonths: 2 },
-    { code: "opv", dose: 2, ageMonths: 3, previousDose: 1, minDays: 28 },
-    { code: "opv", dose: 3, ageMonths: 4, previousDose: 2, minDays: 28 },
-    { code: "ipv", dose: 1, ageMonths: 5 },
-    { code: "ipv", dose: 2, ageMonths: 9, previousDose: 1, minDays: 28 },
     { code: "rota", dose: 1, ageMonths: 2, note: "Hoàn thành trước 6 tháng theo lịch TCMR" },
     { code: "rota", dose: 2, ageMonths: 3, previousDose: 1, minDays: 28 },
     { code: "pcv", dose: 1, ageMonths: 2 },
@@ -409,7 +405,7 @@ function vaccineSchedule() {
     { code: "je", dose: 2, ageMonths: 12, previousDose: 1, minDays: 7, note: "1–2 tuần sau mũi 1" },
     { code: "je", dose: 3, ageMonths: 24, previousDose: 1, minMonths: 12, note: "1 năm sau mũi 1" },
   ];
-  if (isThreeDoseRota) rows.splice(13, 0, { code: "rota", dose: 3, ageMonths: 4, previousDose: 2, minDays: 28, note: "Theo sản phẩm 3 liều đã nhập" });
+  if (isThreeDoseRota) rows.splice(rows.findIndex((row) => row.code === "pcv"), 0, { code: "rota", dose: 3, ageMonths: 4, previousDose: 2, minDays: 28, note: "Theo sản phẩm 3 liều đã nhập" });
   return rows.map((row) => {
     let dueAt = addMonths(new Date(PROFILE.birthAt), row.ageMonths);
     const previous = completedRecords.find((entry) => entry.payload.code === row.code && Number(entry.payload.dose) === row.previousDose);
@@ -431,7 +427,127 @@ function renderVaccines() {
   const now = new Date();
   const schedule = vaccineSchedule();
   const seriesCounts = schedule.reduce((counts, item) => ({ ...counts, [item.code]: (counts[item.code] || 0) + 1 }), {});
-  const scheduledHtml = schedule.filter((item) => !s…2139 tokens truncated… "hidden";
+  const scheduledHtml = schedule.filter((item) => !skipped.some((entry) => entry.payload.code === item.code && Number(entry.payload.dose || 1) === item.dose)).map((item) => {
+    const record = records.find((entry) => entry.payload.code === item.code && Number(entry.payload.dose) === item.dose);
+    const plan = plans.find((entry) => entry.payload.code === item.code && Number(entry.payload.dose) === item.dose);
+    const dueAt = plan ? new Date(plan.occurredAt) : item.dueAt;
+    const days = Math.ceil((dueAt - now) / 86400000);
+    const status = record ? "done" : days < 0 ? "due" : days <= 21 ? "soon" : "future";
+    const statusText = record ? `Thực hiện ngày ${formatDate(record.occurredAt)}` : plan ? `Đã đổi lịch • dự kiến ${formatDate(dueAt)}` : days < 0 ? "Đã đến lịch, ba mẹ kiểm tra lại nhé" : days === 0 ? "Dự kiến hôm nay" : `Dự kiến ${formatDate(dueAt)}`;
+    const doseLabel = seriesCounts[item.code] > 1 ? ` • mũi ${item.dose}` : "";
+    const actions = record
+      ? `<button class="mini-button" type="button" data-edit="${record.id}">Sửa thông tin</button>`
+      : `<button class="mini-button primary" type="button" data-vaccine-action="done" data-vaccine-code="${item.code}" data-vaccine-dose="${item.dose}" data-vaccine-date="${toLocalInput(new Date())}">Ghi đã tiêm/uống</button><button class="mini-button" type="button" data-vaccine-action="planned" data-vaccine-code="${item.code}" data-vaccine-dose="${item.dose}" data-vaccine-date="${toLocalInput(dueAt)}">Đổi lịch</button><button class="mini-button" type="button" data-vaccine-action="skipped" data-vaccine-code="${item.code}" data-vaccine-dose="${item.dose}">BỎ QUA</button>`;
+    return `<article class="vaccine-item"><span class="vaccine-status ${status}"></span><div class="vaccine-item-main"><div class="vaccine-item-head"><h3>${escapeHtml(VACCINE_NAMES[item.code])}${doseLabel}</h3>${record ? '<span class="vaccine-done-badge">✓ ĐÃ TIÊM</span>' : `<time>${formatMonthYear(dueAt)}</time>`}</div><p>${escapeHtml(statusText)}${item.recalculatedFromActual && !record && !plan ? " • Đã tính lại từ lần thực tế trước" : ""}${item.note ? ` • ${escapeHtml(item.note)}` : ""}</p><div class="vaccine-actions">${actions}${plan ? `<button class="mini-button" type="button" data-edit="${plan.id}">Sửa lịch đã đổi</button>` : ""}</div></div></article>`;
+  }).join("");
+
+  const customRecords = vaccineEntries.filter((entry) => entry.payload.code === "other" || entry.payload.customName);
+  const upcomingCustom = customRecords.filter((entry) => entry.payload.nextDoseAt).sort((a, b) => new Date(a.payload.nextDoseAt) - new Date(b.payload.nextDoseAt));
+  const regularCustom = customRecords.filter((entry) => !entry.payload.nextDoseAt);
+  const customCard = (entry, upcoming = false) => {
+    const planned = entry.payload.status === "planned";
+    const name = entry.payload.customName || "Vắc-xin khác";
+    const nextAt = entry.payload.nextDoseAt ? new Date(entry.payload.nextDoseAt) : null;
+    const nextDays = nextAt ? Math.ceil((nextAt - now) / 86400000) : null;
+    const nextStatus = nextAt ? (nextDays < 0 ? "due" : nextDays <= 21 ? "soon" : "future") : (planned ? "future" : "done");
+    return `<article class="vaccine-item"><span class="vaccine-status ${nextStatus}"></span><div class="vaccine-item-main"><div class="vaccine-item-head"><h3>${escapeHtml(name)}${Number(entry.payload.dose) > 1 ? ` • mũi ${entry.payload.dose}` : ""}</h3>${planned ? `<time>${formatMonthYear(entry.occurredAt)}</time>` : '<span class="vaccine-done-badge">✓ ĐÃ TIÊM</span>'}</div><p>${planned ? `Dự kiến ${formatDate(entry.occurredAt)}` : `Thực hiện ngày ${formatDate(entry.occurredAt)}`}${nextAt ? ` • Đợt tiêm kế tiếp: ${formatDate(nextAt)}` : ""}</p><div class="vaccine-actions"><button class="mini-button" type="button" data-edit="${entry.id}">${upcoming ? "Cập nhật đợt kế tiếp" : "Sửa thông tin"}</button></div></div></article>`;
+  };
+  const upcomingHtml = upcomingCustom.length ? `<p class="custom-vaccine-label">ĐỢT TIÊM KẾ TIẾP</p>${upcomingCustom.map((entry) => customCard(entry, true)).join("")}` : "";
+  const customHtml = regularCustom.length ? `<p class="custom-vaccine-label">VẮC-XIN BỔ SUNG</p>${regularCustom.map((entry) => customCard(entry)).join("")}` : "";
+
+  $("#vaccine-list").innerHTML = upcomingHtml + scheduledHtml + customHtml;
+}
+
+async function skipVaccineReminder(button) {
+  const code = button.dataset.vaccineCode;
+  const dose = Number(button.dataset.vaccineDose || 1);
+  const label = `${VACCINE_NAMES[code] || "Lịch tiêm"}${SINGLE_DOSE_VACCINES.has(code) ? "" : ` • mũi ${dose}`}`;
+  if (!window.confirm(`Ẩn ${label} khỏi danh sách nhắc hẹn?`)) return;
+  const now = new Date().toISOString();
+  const existing = state.entries.find((entry) => entry.type === "vaccine" && entry.payload.status === "skipped" && entry.payload.code === code && Number(entry.payload.dose || 1) === dose);
+  await saveEntry({
+    id: existing?.id || (crypto.randomUUID ? crypto.randomUUID() : `${Date.now()}-${Math.random().toString(16).slice(2)}`),
+    type: "vaccine",
+    occurredAt: now,
+    timezoneOffsetMinutes: -new Date().getTimezoneOffset(),
+    payload: { code, dose, status: "skipped" },
+    createdAt: existing?.createdAt || now,
+    createdBy: existing?.createdBy || state.user,
+    updatedAt: now,
+    updatedBy: state.user,
+    version: (existing?.version || 0) + 1,
+    deleted: false,
+    syncStatus: "pending",
+  });
+  await refreshData();
+  showToast("Đã ẩn khỏi danh sách nhắc hẹn");
+  scheduleSync();
+}
+
+function renderReport() {
+  const from = new Date();
+  from.setDate(from.getDate() - 6);
+  from.setHours(0, 0, 0, 0);
+  const recent = state.entries.filter((entry) => new Date(entry.occurredAt) >= from);
+  const feed = sum(recent.filter((entry) => entry.type === "feed"), (entry) => entry.payload.amount || 0);
+  const pump = sum(recent.filter((entry) => entry.type === "pump"), (entry) => entry.payload.amount || 0);
+  const poo = recent.filter((entry) => entry.type === "poo").length;
+  $("#report-summary").innerHTML = `<div><strong>${feed}</strong><small>ml bé đã uống</small></div><div><strong>${pump}</strong><small>ml mẹ đã hút</small></div><div><strong>${poo}</strong><small>lần vệ sinh</small></div>`;
+}
+
+function renderActiveBottles() {
+  if (!state.user) return;
+  const now = Date.now();
+  const bottles = state.entries.filter((entry) => {
+    if (entry.type !== "feed" || !entry.payload.leftover || entry.payload.discardedAt) return false;
+    const touched = new Date(entry.payload.touchedAt || entry.occurredAt).getTime();
+    return now - touched < 12 * 3600000;
+  });
+  const section = $("#active-bottles-section");
+  section.classList.toggle("hidden", !bottles.length);
+  $("#active-bottles").innerHTML = bottles.map((entry) => {
+    const deadline = bottleDeadline(entry);
+    const remaining = deadline - now;
+    const expired = remaining <= 0;
+    const milk = entry.payload.milkType === "formula" ? "Sữa công thức" : entry.payload.milkType === "mixed" ? "Sữa trộn" : "Sữa mẹ";
+    return `<article class="bottle-card"><div><h3>${milk} • còn ${entry.payload.leftover} ml</h3><p>${expired ? "Đã quá thời gian dùng an toàn" : `Bé chạm miệng lúc ${formatShortTime(entry.payload.touchedAt)}`}<button class="discard-button" type="button" data-discard="${entry.id}">Bỏ bình này</button></p></div><div class="bottle-clock ${expired ? "expired" : ""}"><small>${expired ? "Trạng thái" : "Còn lại"}</small><strong>${expired ? "Nên bỏ" : formatCountdown(remaining)}</strong></div></article>`;
+  }).join("");
+}
+
+function bottleDeadline(entry) {
+  const payload = entry.payload;
+  if (payload.milkType === "breast") {
+    return new Date(payload.endedAt || payload.touchedAt || entry.occurredAt).getTime() + 120 * 60000;
+  }
+  return new Date(payload.touchedAt || entry.occurredAt).getTime() + 60 * 60000;
+}
+
+async function discardBottle(id) {
+  const entry = await getEntry(id);
+  if (!entry) return;
+  await saveEntry({ ...entry, payload: { ...entry.payload, discardedAt: new Date().toISOString() }, updatedAt: new Date().toISOString(), updatedBy: state.user, version: (entry.version || 1) + 1, syncStatus: "pending" });
+  await refreshData();
+  scheduleSync();
+}
+
+function openSheet(type, entry = null, preset = {}) {
+  state.sheetType = type;
+  state.editingId = entry?.id || null;
+  const titles = {
+    feed: ["CỮ SỮA", entry ? "Sửa cữ bé uống" : "Bé vừa uống"],
+    pump: ["SỮA MẸ", entry ? "Sửa lần hút sữa" : "Mẹ vừa hút sữa"],
+    poo: ["VỆ SINH CÁ NHÂN", entry ? "Sửa lần đi Poo" : "Ghi một lần đi Poo"],
+    sleep: ["GIẤC NGỦ", entry ? "Sửa giấc ngủ" : "Ghi một giấc ngủ"],
+    growth: ["LỚN LÊN", entry ? "Sửa số đo" : "Thêm số đo"],
+    vaccine: ["BẢO VỆ BÉ", entry ? "Sửa thông tin tiêm chủng" : preset.status === "planned" ? "Điều chỉnh lịch dự kiến" : "Ghi lần đã tiêm hoặc uống"],
+  };
+  $("#sheet-eyebrow").textContent = titles[type][0];
+  $("#sheet-title").textContent = titles[type][1];
+  $("#entry-form").innerHTML = formTemplate(type, entry, preset);
+  $("#entry-form").addEventListener("submit", saveFormEntry);
+  $("#sheet-backdrop").classList.remove("hidden");
+  $("#form-sheet").classList.remove("hidden");
+  document.body.style.overflow = "hidden";
   if (type === "vaccine") updateVaccineFormVisibility();
   setTimeout(() => $("#entry-form input:not([type=hidden]), #entry-form select")?.focus(), 80);
 }
@@ -467,8 +583,9 @@ function formTemplate(type, entry, preset = {}) {
   if (type === "growth") return `<div class="field-row"><label>Cân nặng (kg)<input name="weight" type="number" min="0.5" max="40" step="0.01" inputmode="decimal" value="${payload.weight || ""}"></label><label>Chiều dài (cm)<input name="length" type="number" min="20" max="150" step="0.1" inputmode="decimal" value="${payload.length || ""}"></label></div><label>Vòng đầu (cm)<input name="head" type="number" min="20" max="80" step="0.1" inputmode="decimal" value="${payload.head || ""}"></label><label>Thời gian đo<input name="occurredAt" type="datetime-local" value="${occurred}" required></label><label>Nơi đo / ghi chú<input name="note" value="${escapeHtml(payload.note || "")}"></label><button class="button primary full" type="submit">Lưu số đo</button>${deleteAction}`;
   if (type === "vaccine") return `
     <label>Trạng thái<select id="vaccine-status" name="status"><option value="done" ${payload.status !== "planned" ? "selected" : ""}>Đã tiêm hoặc uống</option><option value="planned" ${payload.status === "planned" ? "selected" : ""}>Chỉ điều chỉnh lịch dự kiến</option></select></label>
-    <label>Loại vắc-xin<select id="vaccine-code" name="code">${Object.entries(VACCINE_NAMES).map(([code, name]) => `<option value="${code}" ${payload.code === code ? "selected" : ""}>${name}</option>`).join("")}</select></label>
+    <label>Loại vắc-xin<select id="vaccine-code" name="code">${Object.entries(VACCINE_NAMES).filter(([code]) => !HIDDEN_VACCINE_CODES.has(code)).map(([code, name]) => `<option value="${code}" ${payload.code === code ? "selected" : ""}>${name}</option>`).join("")}</select></label>
     <label id="custom-vaccine-name" class="${payload.code === "other" ? "" : "hidden"}">Tên vắc-xin bổ sung<input name="customName" value="${escapeHtml(payload.customName || "")}" placeholder="Ví dụ: COVID-19"></label>
+    <label id="custom-vaccine-next" class="${payload.code === "other" ? "" : "hidden"}">Đợt tiêm kế tiếp<input name="nextDoseAt" type="date" value="${payload.nextDoseAt ? toLocalInput(payload.nextDoseAt).slice(0, 10) : ""}"><small>Nhập ngày dự kiến; lịch này sẽ tự được đưa lên đầu danh sách.</small></label>
     <div class="field-row"><label id="vaccine-dose-field" class="${SINGLE_DOSE_VACCINES.has(payload.code) ? "hidden" : ""}">Mũi số<input name="dose" type="number" min="1" max="20" value="${payload.dose || 1}"></label><label><span id="vaccine-date-label">${payload.status === "planned" ? "Ngày giờ dự kiến" : "Ngày giờ thực tế"}</span><input name="occurredAt" type="datetime-local" value="${occurred}" required></label></div>
     <div id="vaccine-completed-fields" class="stack"><label>Tên sản phẩm (nếu biết)<input name="productName" value="${escapeHtml(payload.productName || "")}" placeholder="Ví dụ: Rotavin, RotaTeq…"></label><label>Nơi tiêm hoặc uống<input name="place" value="${escapeHtml(payload.place || "")}"></label><label>Phản ứng hoặc ghi chú<textarea name="note" rows="2">${escapeHtml(payload.note || "")}</textarea></label></div>
     <button class="button primary full" type="submit">${payload.status === "planned" ? "Lưu lịch dự kiến" : "Lưu thông tin tiêm chủng"}</button>${deleteAction}`;
@@ -479,6 +596,7 @@ function updateVaccineFormVisibility() {
   const code = $("#vaccine-code")?.value;
   const planned = $("#vaccine-status")?.value === "planned";
   $("#custom-vaccine-name")?.classList.toggle("hidden", code !== "other");
+  $("#custom-vaccine-next")?.classList.toggle("hidden", code !== "other");
   $("#vaccine-dose-field")?.classList.toggle("hidden", SINGLE_DOSE_VACCINES.has(code));
   if (SINGLE_DOSE_VACCINES.has(code)) $("#vaccine-dose-field input").value = "1";
   $("#vaccine-completed-fields")?.classList.toggle("hidden", planned);
@@ -541,7 +659,8 @@ async function saveFormEntry(event) {
     const customName = data.get("customName")?.trim() || "";
     if (code === "other" && !customName) return showToast("Hãy nhập tên vắc-xin bổ sung.");
     const dose = SINGLE_DOSE_VACCINES.has(code) ? 1 : Number(data.get("dose") || 1);
-    payload = { code, dose, status, customName, productName: data.get("productName")?.trim() || "", place: data.get("place")?.trim() || "", note: data.get("note")?.trim() || "" };
+    const nextDoseAt = code === "other" && data.get("nextDoseAt") ? fromLocalInput(`${data.get("nextDoseAt")}T09:00`) : null;
+    payload = { code, dose, status, customName, nextDoseAt, productName: data.get("productName")?.trim() || "", place: data.get("place")?.trim() || "", note: data.get("note")?.trim() || "" };
     if (!existing) {
       existing = state.entries.find((entry) => entry.type === "vaccine"
         && entry.payload.code === code
@@ -753,4 +872,3 @@ function slug(value) {
 function escapeHtml(value) {
   return String(value ?? "").replace(/[&<>'"]/g, (character) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", "'": "&#39;", '"': "&quot;" })[character]);
 }
-
