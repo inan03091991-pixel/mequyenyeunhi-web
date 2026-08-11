@@ -102,6 +102,21 @@ input:focus, select:focus, textarea:focus { border-color: #d96889; box-shadow: 0
 .filter-row { display: flex; gap: 7px; overflow-x: auto; padding-bottom: 13px; scrollbar-width: none; }
 .chip { flex: none; border: 1px solid var(--line); border-radius: 999px; background: var(--surface); padding: 9px 13px; font-size: .72rem; font-weight: 750; }
 .chip.selected { border-color: var(--coral); background: var(--coral); color: white; }
+.day-picker { display:grid; grid-template-columns:46px minmax(0,1fr) 46px; gap:9px; align-items:stretch; }
+.day-picker > button { border:1px solid var(--line); border-radius:16px; background:var(--surface); color:#a64d6a; font-size:1.65rem; }
+.day-picker label { display:grid; gap:5px; padding:10px 13px; border:1px solid var(--line); border-radius:16px; background:var(--surface); }
+.day-picker label span { color:var(--muted); font-size:.65rem; font-weight:750; }
+.day-picker input { min-height:28px; border:0; padding:0; background:transparent; font-weight:800; }
+.daily-today { display:block; margin:9px auto 0; border:0; background:none; color:#a64d6a; padding:7px 12px; font-size:.71rem; font-weight:800; }
+.daily-date-heading { margin:17px 0 10px; font-family:Georgia,serif; font-size:1.2rem; font-weight:800; text-transform:capitalize; }
+.daily-metric-grid { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:10px; }
+.daily-metric-card { min-width:0; padding:16px; border:1px solid #f0d9e1; border-radius:19px; background:linear-gradient(145deg,#fff8fa,var(--coral-soft)); }
+.daily-metric-card span,.daily-metric-card small { display:block; color:var(--muted); font-size:.67rem; }
+.daily-metric-card strong { display:block; margin:7px 0 4px; font-family:Georgia,serif; font-size:1.25rem; }
+.daily-summary { margin-top:12px; padding:17px; border:1px solid #efd7df; border-radius:19px; background:linear-gradient(135deg,#fff8fa,#fcecf2); }
+.daily-summary strong { color:#9e4562; font-size:.78rem; }
+.daily-summary p { margin:7px 0 0; color:#705d65; font-size:.75rem; line-height:1.55; }
+.daily-activity-heading { margin-top:25px; }
 
 .button { min-height: 43px; border: 0; border-radius: 14px; padding: 10px 15px; font-weight: 800; font-size: .78rem; }
 .button.primary { background: var(--coral); color: white; box-shadow: 0 10px 22px rgba(184,75,111,.20); }
