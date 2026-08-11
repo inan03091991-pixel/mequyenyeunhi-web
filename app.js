@@ -118,6 +118,10 @@ function bindStaticEvents() {
 
     const vaccineAction = event.target.closest("[data-vaccine-action]");
     if (vaccineAction) {
+      if (vaccineAction.dataset.vaccineAction === "skipped") {
+        await skipVaccineReminder(vaccineAction);
+        return;
+      }
       openSheet("vaccine", null, {
         code: vaccineAction.dataset.vaccineCode,
         dose: Number(vaccineAction.dataset.vaccineDose || 1),
@@ -380,7 +384,7 @@ function renderGrowth() {
 }
 
 function vaccineSchedule() {
-  const completedRecords = state.entries.filter((entry) => entry.type === "vaccine" && entry.payload.status !== "planned");
+  const completedRecords = state.entries.filter((entry) => entry.type === "vaccine" && entry.payload.status !== "planned" && entry.payload.status !== "skipped");
   const rotaRecords = completedRecords.filter((entry) => entry.payload.code === "rota");
   const isThreeDoseRota = rotaRecords.some((entry) => /rotateq|rotasiil|3\s*liều/i.test(entry.payload.productName || ""));
   const rows = [
@@ -421,15 +425,13 @@ function vaccineSchedule() {
 
 function renderVaccines() {
   const vaccineEntries = state.entries.filter((entry) => entry.type === "vaccine");
-  const records = vaccineEntries.filter((entry) => entry.payload.status !== "planned");
+  const records = vaccineEntries.filter((entry) => entry.payload.status !== "planned" && entry.payload.status !== "skipped");
   const plans = vaccineEntries.filter((entry) => entry.payload.status === "planned");
+  const skipped = vaccineEntries.filter((entry) => entry.payload.status === "skipped");
   const now = new Date();
   const schedule = vaccineSchedule();
   const seriesCounts = schedule.reduce((counts, item) => ({ ...counts, [item.code]: (counts[item.code] || 0) + 1 }), {});
-  const scheduledHtml = schedule.map((item) => {
-    const record = records.find((entry) => entry.payload.code === item.code && Number(entry.payload.dose) === item.dose);
-    const plan = plans.find((entry) => entry.payload.code === item.code && Number(entry.payload.dose) === item.dose);
-    const dueAt = plan ? new Date(plan.occurredAt) : item.dueAt;…1693 tokens truncated… "hidden";
+  const scheduledHtml = schedule.filter((item) => !s…2139 tokens truncated… "hidden";
   if (type === "vaccine") updateVaccineFormVisibility();
   setTimeout(() => $("#entry-form input:not([type=hidden]), #entry-form select")?.focus(), 80);
 }
@@ -751,3 +753,4 @@ function slug(value) {
 function escapeHtml(value) {
   return String(value ?? "").replace(/[&<>'"]/g, (character) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", "'": "&#39;", '"': "&quot;" })[character]);
 }
+
