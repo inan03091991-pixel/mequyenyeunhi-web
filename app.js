@@ -210,7 +210,13 @@ async function remoteLogin(username, password) {
 
 function readSavedProfile() {
   try {
-    return JSON.parse(localStorage.getItem("hynhi_profile") || "null");
+    const profile = JSON.parse(localStorage.getItem("hynhi_profile") || "null");
+    // Sửa một lần dữ liệu giờ sinh đã được lưu nhầm ở các phiên bản trước.
+    if (profile?.birthAt === "2026-05-25T03:02:00+07:00") {
+      profile.birthAt = "2026-05-25T15:03:00+07:00";
+      localStorage.setItem("hynhi_profile", JSON.stringify(profile));
+    }
+    return profile;
   } catch {
     return null;
   }
