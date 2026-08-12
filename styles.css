@@ -123,6 +123,14 @@ input:focus, select:focus, textarea:focus { border-color: #d96889; box-shadow: 0
 .button.soft { background: var(--coral-soft); color: #9f405e; }
 .button.full { width: 100%; }
 .growth-summary { min-height: 130px; margin-bottom: 26px; }
+.growth-standard { margin: 0 0 22px; padding: 16px; border: 1px solid #efd8e1; border-radius: 19px; background: linear-gradient(135deg,#fff8fa,#f7edf5); color: #6f5a64; font-size: .76rem; line-height: 1.5; }
+.growth-standard strong { display:block; color:#9d4562; font-size:.82rem; }
+.growth-standard p { margin:7px 0 0; }
+.growth-standard small { display:block; margin-top:9px; color:var(--muted); font-size:.67rem; }
+.development-stages { display:grid; gap:9px; margin-bottom:25px; }
+.development-card { padding:14px 15px; border:1px solid var(--line); border-radius:17px; background:var(--surface); }
+.development-card strong { color:#a34c69; font-size:.8rem; }
+.development-card p { margin:5px 0 0; color:var(--muted); font-size:.72rem; line-height:1.45; }
 .growth-cards { width: 100%; display: grid; grid-template-columns: repeat(3,1fr); gap: 8px; }
 .growth-cards div { padding: 15px 8px; border-radius: 17px; background: var(--surface); text-align: center; border: 1px solid var(--line); }
 .growth-cards strong { display: block; font-family: Georgia,serif; font-size: 1.25rem; }
@@ -130,6 +138,11 @@ input:focus, select:focus, textarea:focus { border-color: #d96889; box-shadow: 0
 .history-card, .vaccine-item, .bottle-card { border: 1px solid var(--line); border-radius: 19px; background: var(--surface); padding: 15px; }
 .history-card { display: flex; justify-content: space-between; gap: 12px; }
 .history-card p { margin: 4px 0 0; color: var(--muted); font-size: .75rem; }
+.teeth-grid { display:grid; grid-template-columns:repeat(10,1fr); gap:6px; padding:10px; border:1px solid var(--line); border-radius:18px; background:#fff6f8; }
+.tooth { display:block; text-align:center; }
+.tooth input { position:absolute; opacity:0; pointer-events:none; }
+.tooth span { display:grid; place-items:center; min-height:30px; border:1px solid #e8cbd6; border-radius:9px; background:#fff; color:#a24b68; font-size:.65rem; font-weight:800; }
+.tooth input:checked + span { background:#d96889; border-color:#d96889; color:#fff; box-shadow:0 4px 10px rgba(217,104,137,.22); }
 .notice-card { margin-bottom: 14px; padding: 16px; border: 1px solid #f0dbe3; border-radius: 18px; background: #fdf0f4; }
 .notice-card strong { font-weight: 780; }
 .notice-card p { margin: 6px 0 0; color: #79616b; font-size: .74rem; line-height: 1.45; }
@@ -208,7 +221,7 @@ body.dark .topbar, body.dark .bottom-nav { background:rgba(40,35,33,.94); }
 body.dark input, body.dark select, body.dark textarea { background:#302a28; }
 
 @media (min-width: 521px) { body { padding: 16px 0; } .app-view, .login-view { border-radius: 28px; overflow: hidden; } .bottom-nav { bottom: 16px; border-radius: 0 0 28px 28px; } .sheet { bottom: 16px; border-radius: 28px; } }
-@media print { .topbar,.bottom-nav,.quick-actions,.button-row,.sync-pill { display:none!important; } body,.app-view { width:100%; max-width:none; background:white; color:#222; box-shadow:none; } .page { display:none!important; } #page-more { display:block!important; } .main-content { padding:0; } .report-card { background:white; color:#222; box-shadow:none; border:1px solid #ddd; } .report-card .eyebrow,.report-numbers small { color:#555; } .settings-list,.source-note { display:none; } }
+@media print { .topbar,.bottom-nav,.quick-actions,.button-row,.sync-pill { display:none!important; } body,.app-view { width:100%; max-width:none; background:white; color:#222; box-shadow:none; } .page { display:none!important; } #page-more { display:block!important; } body.print-all-report .page { display:block!important; break-inside:auto; } .main-content { padding:0; } .report-card { background:white; color:#222; box-shadow:none; border:1px solid #ddd; } .report-card .eyebrow,.report-numbers small { color:#555; } .settings-list,.source-note { display:none; } }
 @media (prefers-reduced-motion: reduce) { *,*::before,*::after { scroll-behavior:auto!important; animation:none!important; transition:none!important; } }
 
 @media (max-width: 360px) { .topbar { align-items:flex-start; } .topbar h1 { font-size:1.25rem; } .sync-pill { padding:7px 8px; font-size:.63rem; } }
