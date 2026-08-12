@@ -96,8 +96,9 @@
               <button type="button" data-open="pump"><span>◉</span>Hút sữa</button>
               <button type="button" data-open="poo"><span>✦</span>Vệ sinh cá nhân</button>
               <button type="button" data-open="sleep"><span>☾</span>Ngủ</button>
-              <button type="button" data-open="growth"><span>↗</span>Cân &amp; đo</button>
+              <button type="button" data-open="growth"><span>↗</span>Cân &amp; phát triển</button>
               <button type="button" data-open="vaccine"><span>＋</span>Tiêm chủng</button>
+              <button type="button" data-open="note"><span>♥</span>Sức khỏe</button>
             </div>
           </section>
 
@@ -125,9 +126,15 @@
 
         <section id="page-growth" class="page" data-page="growth">
           <div class="page-title with-action"><div><p class="eyebrow">LỚN LÊN</p><h2>Tăng trưởng</h2></div><button class="button soft" type="button" data-open="growth">＋ Thêm số đo</button></div>
+          <div class="notice-card"><strong>Tham chiếu tăng trưởng</strong><p>So sánh theo chuẩn WHO cho bé gái 0–5 tuổi, được dùng rộng rãi tại châu Á. Đây là mốc tham khảo, không thay thế đánh giá của bác sĩ.</p></div>
           <div id="latest-growth" class="growth-summary empty-state">Chưa có số đo. Bạn có thể bổ sung sau.</div>
+          <div id="growth-standard" class="growth-standard empty-state">Nhập cân nặng hoặc chiều dài để xem so sánh theo tháng tuổi.</div>
+          <div class="section-heading"><div><p class="eyebrow">PHÁT TRIỂN</p><h2>Các giai đoạn của Hỷ Nhi</h2></div></div>
+          <div id="development-stages" class="development-stages"></div>
           <div class="section-heading"><div><p class="eyebrow">LỊCH SỬ</p><h2>Các lần đo</h2></div></div>
           <div id="growth-history" class="stack empty-state">Chưa có dữ liệu.</div>
+          <div class="section-heading"><div><p class="eyebrow">SỨC KHỎE</p><h2>Ghi chú sức khỏe &amp; mọc răng</h2></div><button class="button soft" type="button" data-open="note">＋ Thêm ghi chú</button></div>
+          <div id="health-notes" class="stack empty-state">Chưa có ghi chú sức khỏe.</div>
         </section>
 
         <section id="page-vaccine" class="page" data-page="vaccine">
@@ -140,11 +147,11 @@
           <div class="page-title"><p class="eyebrow">TỔNG HỢP</p><h2>Báo cáo và cài đặt</h2></div>
           <article class="report-card">
             <p class="eyebrow">7 NGÀY GẦN NHẤT</p><div id="report-summary" class="report-numbers"></div>
-            <div class="button-row"><button id="export-csv" class="button soft" type="button">Bảng dữ liệu</button><button id="export-json" class="button soft" type="button">Dữ liệu cho AI</button><button id="print-report" class="button primary" type="button">In hoặc lưu PDF</button></div>
+            <div class="button-row"><button id="print-report" class="button primary" type="button">Báo cáo tổng quát PDF</button></div>
           </article>
           <div class="settings-list">
             <button id="theme-toggle" type="button"><span>Giao diện ban đêm</span><strong>Tự động</strong></button>
-            <button id="profile-button" type="button"><span>Hồ sơ của bé</span><strong>Hỷ Nhi ›</strong></button>
+            <button id="profile-button" type="button"><span>Hồ sơ của bé</span><strong>Hỷ Nhi • Nữ ›</strong></button>
             <button id="logout-button" type="button"><span>Đăng xuất</span><strong id="current-user">›</strong></button>
           </div>
           <p class="source-note">Lịch tiêm chủng chỉ dùng để nhắc việc, không thay thế chỉ định của bác sĩ hoặc cơ sở tiêm chủng.</p>
