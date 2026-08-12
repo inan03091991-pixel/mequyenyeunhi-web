@@ -35,6 +35,16 @@ const VACCINE_NAMES = {
 
 const SINGLE_DOSE_VACCINES = new Set(["hepb", "bcg", "measles", "mr"]);
 const HIDDEN_VACCINE_CODES = new Set(["opv", "ipv"]);
+const GROWTH_REFERENCE = {
+  0: { weight: [2.4, 4.2], length: [45.6, 52.7] }, 1: { weight: [2.8, 4.8], length: [49.0, 57.6] }, 2: { weight: [3.4, 5.8], length: [52.0, 61.1] }, 3: { weight: [4.0, 6.6], length: [55.0, 64.0] }, 4: { weight: [4.4, 7.3], length: [57.8, 66.4] }, 5: { weight: [4.8, 7.8], length: [59.6, 68.5] }, 6: { weight: [5.1, 8.3], length: [61.2, 70.3] }, 7: { weight: [5.3, 8.7], length: [62.7, 71.9] }, 8: { weight: [5.6, 9.0], length: [64.0, 73.5] }, 9: { weight: [5.8, 9.3], length: [65.3, 75.0] }, 10: { weight: [6.0, 9.6], length: [66.5, 76.4] }, 11: { weight: [6.2, 9.9], length: [67.7, 77.8] }, 12: { weight: [6.4, 10.2], length: [69.2, 79.2] }, 15: { weight: [6.9, 11.1], length: [72.0, 82.7] }, 18: { weight: [7.3, 11.8], length: [74.9, 86.5] }, 21: { weight: [7.8, 12.6], length: [77.4, 89.4] }, 24: { weight: [8.1, 13.2], length: [79.3, 92.2] }, 36: { weight: [9.6, 16.6], length: [87.4, 102.7] }, 48: { weight: [11.0, 20.0], length: [94.1, 111.3] }, 60: { weight: [12.3, 23.5], length: [99.8, 118.9] },
+};
+const DEVELOPMENT_STAGES = [
+  ["Trí não & học hỏi", "Nhìn theo vật chuyển động, nhận ra giọng ba mẹ, tò mò khám phá."],
+  ["Vận động", "Từ kiểm soát đầu cổ đến lẫy, ngồi, bò, đứng và bước đi theo nhịp riêng."],
+  ["Ngôn ngữ", "Ê a, quay về phía âm thanh, bắt chước âm và dần hiểu lời quen thuộc."],
+  ["Cảm xúc & xã hội", "Mỉm cười đáp lại, gắn bó với người chăm sóc và thể hiện nhu cầu rõ hơn."],
+  ["Răng miệng", "Theo dõi dấu hiệu mọc răng, nướu sưng, chảy dãi và thói quen đưa đồ vật lên miệng."],
+];
 
 const state = {
   user: null,
@@ -97,9 +107,8 @@ function bindStaticEvents() {
   $("#close-sheet").addEventListener("click", closeSheet);
   $("#sheet-backdrop").addEventListener("click", closeSheet);
   $("#main-add").addEventListener("click", () => openSheet("feed"));
-  $("#export-json").addEventListener("click", exportJson);
-  $("#export-csv").addEventListener("click", exportCsv);
-  $("#print-report").addEventListener("click", () => window.print());
+  $("#profile-button").addEventListener("click", () => openSheet("profile"));
+  $("#print-report").addEventListener("click", printFullReport);
 
   document.addEventListener("click", async (event) => {
     const openButton = event.target.closest("[data-open]");
@@ -278,6 +287,7 @@ function renderAll() {
   renderDailyInsights();
   renderDailyOverview();
   renderGrowth();
+  renderHealthNotes();
   renderVaccines();
   renderReport();
   renderActiveBottles();
@@ -439,6 +449,7 @@ function describeEntry(entry) {
   if (entry.type === "poo") return { title: `Vệ sinh cá nhân • ${payload.color || "Chưa chọn màu"}`, detail: payload.consistency || "Chưa chọn dạng phân" };
   if (entry.type === "sleep") return { title: `Ngủ ${formatDuration(payload.durationMinutes || 0)}`, detail: `${formatShortTime(payload.startedAt)} – ${formatShortTime(payload.endedAt)}` };
   if (entry.type === "growth") return { title: "Cập nhật số đo", detail: [payload.weight && `${payload.weight} kg`, payload.length && `${payload.length} cm`, payload.head && `vòng đầu ${payload.head} cm`].filter(Boolean).join(" • ") };
+  if (entry.type === "note") return { title: payload.noteKind === "teething" ? "Theo dõi mọc răng" : payload.noteKind === "fever" ? "Theo dõi sốt" : payload.noteKind === "illness" ? "Ghi nhận bệnh / triệu chứng" : "Ghi chú sức khỏe", detail: [payload.temperature && `${payload.temperature}°C`, payload.note, payload.teeth?.length && `đã mọc ${payload.teeth.length} răng`].filter(Boolean).join(" • ") };
   if (entry.type === "vaccine") {
     const name = payload.customName || VACCINE_NAMES[payload.code] || payload.name || "Tiêm chủng";
     const dose = SINGLE_DOSE_VACCINES.has(payload.code) ? "" : ` • mũi ${payload.dose || 1}`;
@@ -456,6 +467,9 @@ function renderGrowth() {
     latestTarget.innerHTML = "Chưa có số đo. Bạn có thể bổ sung sau.";
     $("#growth-history").className = "stack empty-state";
     $("#growth-history").innerHTML = "Chưa có dữ liệu.";
+    $("#growth-standard").className = "growth-standard empty-state";
+    $("#growth-standard").innerHTML = "Nhập cân nặng hoặc chiều dài để xem so sánh theo tháng tuổi.";
+    $("#development-stages").innerHTML = DEVELOPMENT_STAGES.map(([title, text]) => `<article class="development-card"><strong>${title}</strong><p>${text}</p></article>`).join("");
     return;
   }
   const latest = growthEntries[0].payload;
@@ -464,6 +478,27 @@ function renderGrowth() {
   const history = $("#growth-history");
   history.className = "stack";
   history.innerHTML = growthEntries.map((entry) => `<article class="history-card"><div><strong>${formatDate(entry.occurredAt)}</strong><p>${describeEntry(entry).detail}</p></div><button class="text-button" type="button" data-edit="${entry.id}">Sửa</button></article>`).join("");
+  const ageMonths = Math.min(60, Math.max(0, Math.round((new Date(growthEntries[0].occurredAt) - new Date(PROFILE.birthAt)) / (30.4375 * 86400000))));
+  const refMonth = Object.keys(GROWTH_REFERENCE).map(Number).sort((a, b) => Math.abs(a - ageMonths) - Math.abs(b - ageMonths))[0];
+  const ref = GROWTH_REFERENCE[refMonth];
+  const compare = (value, range, unit) => value == null ? "Chưa nhập" : `${value} ${unit} • ${value < range[0] ? "thấp hơn khoảng tham khảo" : value > range[1] ? "cao hơn khoảng tham khảo" : "trong khoảng tham khảo"} (${range[0]}–${range[1]} ${unit})`;
+  $("#growth-standard").className = "growth-standard";
+  $("#growth-standard").innerHTML = `<strong>So sánh ở khoảng ${ageMonths} tháng tuổi</strong><p>Cân nặng: ${compare(latest.weight, ref.weight, "kg")}</p><p>Chiều dài: ${compare(latest.length, ref.length, "cm")}</p><small>Khoảng tham khảo gần nhất: tháng ${refMonth}. Nếu đường tăng trưởng thay đổi nhanh hoặc ba mẹ lo lắng, hãy trao đổi với bác sĩ.</small>`;
+  $("#development-stages").innerHTML = DEVELOPMENT_STAGES.map(([title, text]) => `<article class="development-card"><strong>${title}</strong><p>${text}</p></article>`).join("");
+}
+
+function renderHealthNotes() {
+  const target = $("#health-notes");
+  if (!target) return;
+  const notes = state.entries.filter((entry) => entry.type === "note");
+  target.className = notes.length ? "stack" : "stack empty-state";
+  target.innerHTML = notes.length ? notes.map((entry) => `<article class="history-card"><div><strong>${formatDate(entry.occurredAt)}</strong><p>${escapeHtml(describeEntry(entry).detail || "Không có chi tiết")}</p></div><button class="text-button" type="button" data-edit="${entry.id}">Sửa</button></article>`).join("") : "Chưa có ghi chú sức khỏe.";
+}
+
+function printFullReport() {
+  document.body.classList.add("print-all-report");
+  window.print();
+  setTimeout(() => document.body.classList.remove("print-all-report"), 1000);
 }
 
 function vaccineSchedule() {
@@ -622,6 +657,8 @@ function openSheet(type, entry = null, preset = {}) {
     sleep: ["GIẤC NGỦ", entry ? "Sửa giấc ngủ" : "Ghi một giấc ngủ"],
     growth: ["LỚN LÊN", entry ? "Sửa số đo" : "Thêm số đo"],
     vaccine: ["BẢO VỆ BÉ", entry ? "Sửa thông tin tiêm chủng" : preset.status === "planned" ? "Điều chỉnh lịch dự kiến" : "Ghi lần đã tiêm hoặc uống"],
+    note: ["SỨC KHỎE", entry ? "Sửa ghi chú sức khỏe" : "Thêm ghi chú sức khỏe"],
+    profile: ["HỒ SƠ", "Hồ sơ của Hỷ Nhi"],
   };
   $("#sheet-eyebrow").textContent = titles[type][0];
   $("#sheet-title").textContent = titles[type][1];
@@ -663,6 +700,12 @@ function formTemplate(type, entry, preset = {}) {
   if (type === "poo") return `<fieldset><legend>Màu phân</legend><div class="choice-grid">${["Vàng", "Xanh", "Nâu", "Đen", "Đỏ", "Trắng/nhạt", "Màu khác"].map((value) => choice("color", value, value, payload.color === value || (!payload.color && value === "Vàng"))).join("")}</div></fieldset><fieldset><legend>Dạng phân</legend><div class="choice-grid">${["Lỏng", "Hơi lỏng", "Sệt", "Thành khuôn", "Cứng"].map((value) => choice("consistency", value, value, payload.consistency === value || (!payload.consistency && value === "Sệt"))).join("")}</div></fieldset><label>Thời gian<input name="occurredAt" type="datetime-local" value="${occurred}" required></label><label>Ghi chú<textarea name="note" rows="2">${escapeHtml(payload.note || "")}</textarea></label><button class="button primary full" type="submit">Lưu lần vệ sinh</button>${deleteAction}`;
   if (type === "sleep") return `<div class="field-row"><label>Bắt đầu<input name="startedAt" type="datetime-local" value="${toLocalInput(payload.startedAt || new Date(Date.now() - 60 * 60000))}" required></label><label>Kết thúc<input name="endedAt" type="datetime-local" value="${toLocalInput(payload.endedAt || new Date())}" required></label></div><label>Ghi chú<textarea name="note" rows="2">${escapeHtml(payload.note || "")}</textarea></label><button class="button primary full" type="submit">Lưu giấc ngủ</button>${deleteAction}`;
   if (type === "growth") return `<div class="field-row"><label>Cân nặng (kg)<input name="weight" type="number" min="0.5" max="40" step="0.01" inputmode="decimal" value="${payload.weight || ""}"></label><label>Chiều dài (cm)<input name="length" type="number" min="20" max="150" step="0.1" inputmode="decimal" value="${payload.length || ""}"></label></div><label>Vòng đầu (cm)<input name="head" type="number" min="20" max="80" step="0.1" inputmode="decimal" value="${payload.head || ""}"></label><label>Thời gian đo<input name="occurredAt" type="datetime-local" value="${occurred}" required></label><label>Nơi đo / ghi chú<input name="note" value="${escapeHtml(payload.note || "")}"></label><button class="button primary full" type="submit">Lưu số đo</button>${deleteAction}`;
+  if (type === "note") {
+    const teeth = payload.teeth || [];
+    const toothNames = ["Hàm trên trái 1", "Hàm trên trái 2", "Hàm trên trái 3", "Hàm trên trái 4", "Hàm trên trái 5", "Hàm trên phải 5", "Hàm trên phải 4", "Hàm trên phải 3", "Hàm trên phải 2", "Hàm trên phải 1", "Hàm dưới trái 1", "Hàm dưới trái 2", "Hàm dưới trái 3", "Hàm dưới trái 4", "Hàm dưới trái 5", "Hàm dưới phải 5", "Hàm dưới phải 4", "Hàm dưới phải 3", "Hàm dưới phải 2", "Hàm dưới phải 1"];
+    return `<label>Loại ghi chú<select name="noteKind"><option value="general" ${payload.noteKind === "general" ? "selected" : ""}>Ghi chú chung</option><option value="fever" ${payload.noteKind === "fever" ? "selected" : ""}>Sốt</option><option value="illness" ${payload.noteKind === "illness" ? "selected" : ""}>Bệnh / triệu chứng</option><option value="teething" ${payload.noteKind === "teething" ? "selected" : ""}>Mọc răng</option></select></label><label>Nhiệt độ (°C, nếu có)<input name="temperature" type="number" step="0.1" min="30" max="45" value="${payload.temperature || ""}"></label><label>Ghi chú<textarea name="note" rows="3" placeholder="Ví dụ: ho, sổ mũi, đã khám…">${escapeHtml(payload.note || "")}</textarea></label><fieldset><legend>Chạm vào răng đã mọc</legend><div class="teeth-grid">${toothNames.map((name, index) => `<label class="tooth"><input type="checkbox" name="teeth" value="${name}" ${teeth.includes(name) ? "checked" : ""}><span>${index + 1}</span></label>`).join("")}</div></fieldset><label>Thời gian ghi<input name="occurredAt" type="datetime-local" value="${occurred}" required></label><button class="button primary full" type="submit">Lưu ghi chú</button>${deleteAction}`;
+  }
+  if (type === "profile") return `<label>Họ tên bé<input name="profileName" value="${escapeHtml(PROFILE.name || "")}" required></label><label>Giới tính<select name="profileSex"><option value="Nữ" ${PROFILE.sex === "Nữ" ? "selected" : ""}>Nữ</option><option value="Nam" ${PROFILE.sex === "Nam" ? "selected" : ""}>Nam</option><option value="Khác" ${PROFILE.sex === "Khác" ? "selected" : ""}>Khác / chưa xác định</option></select></label><label>Ngày giờ sinh<input name="profileBirthAt" type="datetime-local" value="${toLocalInput(PROFILE.birthAt)}" required></label><label>Nơi sinh<input name="profileBirthPlace" value="${escapeHtml(PROFILE.birthPlace || "")}"></label><button class="button primary full" type="submit">Lưu hồ sơ</button>`;
   if (type === "vaccine") return `
     <label>Trạng thái<select id="vaccine-status" name="status"><option value="done" ${payload.status !== "planned" ? "selected" : ""}>Đã tiêm hoặc uống</option><option value="planned" ${payload.status === "planned" ? "selected" : ""}>Chỉ điều chỉnh lịch dự kiến</option></select></label>
     <label>Loại vắc-xin<select id="vaccine-code" name="code">${Object.entries(VACCINE_NAMES).filter(([code]) => !HIDDEN_VACCINE_CODES.has(code)).map(([code, name]) => `<option value="${code}" ${payload.code === code ? "selected" : ""}>${name}</option>`).join("")}</select></label>
@@ -735,6 +778,15 @@ async function saveFormEntry(event) {
   } else if (state.sheetType === "growth") {
     payload = { weight: numberOrNull(data.get("weight")), length: numberOrNull(data.get("length")), head: numberOrNull(data.get("head")), note: data.get("note")?.trim() || "" };
     if (!payload.weight && !payload.length && !payload.head) return showToast("Hãy nhập ít nhất một số đo.");
+  } else if (state.sheetType === "note") {
+    payload = { noteKind: data.get("noteKind") || "general", temperature: numberOrNull(data.get("temperature")), note: data.get("note")?.trim() || "", teeth: data.getAll("teeth") };
+  } else if (state.sheetType === "profile") {
+    PROFILE = { ...PROFILE, name: data.get("profileName")?.trim() || PROFILE.name, sex: data.get("profileSex") || PROFILE.sex, birthAt: fromLocalInput(data.get("profileBirthAt")), birthPlace: data.get("profileBirthPlace")?.trim() || PROFILE.birthPlace };
+    localStorage.setItem("hynhi_profile", JSON.stringify(PROFILE));
+    renderProfile();
+    closeSheet();
+    showToast("Đã lưu hồ sơ của Hỷ Nhi");
+    return;
   } else if (state.sheetType === "vaccine") {
     const code = data.get("code");
     const status = data.get("status") === "planned" ? "planned" : "done";
