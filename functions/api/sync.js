@@ -23,8 +23,10 @@ export async function onRequestPost(context) {
       nextCursor = Math.max(nextCursor, Number(row.cursor));
     }
     const expires = new Date(Date.now() + 365 * 86400000).toISOString();
-    await context.env.DB.prepare("UPDATE sessions SET expires_at = ? WHERE token_hash = ?")
-      .bind(expires, auth.tokenHash).run();
+    if (auth.expiresAt && new Date(auth.expiresAt).getTime() < Date.now() + 30 * 86400000) {
+      await context.env.DB.prepare("UPDATE sessions SET expires_at = ? WHERE token_hash = ?")
+        .bind(expires, auth.tokenHash).run();
+    }
     return json({ entries, cursor: nextCursor }, 200, { "Set-Cookie": sessionCookie(context.request, auth.token) });
   } catch (error) {
     return json({ error: "sync_failed", message: error.message }, 500);
@@ -58,9 +60,9 @@ async function authenticatedUser(context) {
   const token = bearerToken || cookie.split(";").map((part) => part.trim()).find((part) => part.startsWith(prefix))?.slice(prefix.length);
   if (!token) return null;
   const tokenHash = await sha256(token);
-  const session = await context.env.DB.prepare("SELECT username FROM sessions WHERE token_hash = ? AND expires_at > ?")
+  const session = await context.env.DB.prepare("SELECT username, expires_at FROM sessions WHERE token_hash = ? AND expires_at > ?")
     .bind(tokenHash, new Date().toISOString()).first();
-  return session?.username ? { username: session.username, token, tokenHash } : null;
+  return session?.username ? { username: session.username, token, tokenHash, expiresAt: session.expires_at } : null;
 }
 
 function sessionCookie(request, token) {
