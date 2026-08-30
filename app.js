@@ -56,6 +56,7 @@ const state = {
   sheetType: null,
   syncTimer: null,
   syncInFlight: false,
+  lastBackgroundSyncAt: 0,
 };
 
 const $ = (selector, root = document) => root.querySelector(selector);
@@ -89,7 +90,7 @@ async function init() {
 
   setInterval(renderActiveBottles, 1000);
   setInterval(checkCalendarDayChange, 30000);
-  setInterval(() => backgroundSync(), 10000);
+  setInterval(() => backgroundSync(), 60000);
 }
 
 function lockMobileViewport() {
@@ -853,6 +854,8 @@ function scheduleSync() {
 
 function backgroundSync() {
   if (!state.user || !navigator.onLine || state.sheetType || document.visibilityState === "hidden") return;
+  if (Date.now() - state.lastBackgroundSyncAt < 55000) return;
+  state.lastBackgroundSyncAt = Date.now();
   attemptSync();
 }
 
