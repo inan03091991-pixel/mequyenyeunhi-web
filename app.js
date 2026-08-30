@@ -900,32 +900,6 @@ async function updateNetworkState(result = null) {
   }
 }
 
-function exportJson() {
-  const content = JSON.stringify({ generatedAt: new Date().toISOString(), profile: PROFILE, entries: state.entries.map(stripSyncFields) }, null, 2);
-  downloadFile(`hy-nhi-report-${localDateKey(new Date())}.json`, content, "application/json");
-}
-
-function exportCsv() {
-  const header = ["id", "loai", "thoi_gian_thuc_te", "nguoi_nhap", "chi_tiet"];
-  const rows = state.entries.map((entry) => [entry.id, entry.type, entry.occurredAt, entry.createdBy, describeEntry(entry).title + " | " + describeEntry(entry).detail]);
-  const csv = [header, ...rows].map((row) => row.map(csvCell).join(",")).join("\r\n");
-  downloadFile(`hy-nhi-report-${localDateKey(new Date())}.csv`, `\uFEFF${csv}`, "text/csv;charset=utf-8");
-}
-
-function stripSyncFields(entry) {
-  const { syncStatus, ...safeEntry } = entry;
-  return safeEntry;
-}
-
-function downloadFile(filename, content, type) {
-  const url = URL.createObjectURL(new Blob([content], { type }));
-  const anchor = document.createElement("a");
-  anchor.href = url;
-  anchor.download = filename;
-  anchor.click();
-  setTimeout(() => URL.revokeObjectURL(url), 1000);
-}
-
 function toggleTheme() {
   document.body.classList.toggle("dark");
   localStorage.setItem("hynhi_theme", document.body.classList.contains("dark") ? "dark" : "light");
